@@ -1,0 +1,43 @@
+{
+  "name": "Camp Utilities Tracker",
+  "short_name": "Camp Utils",
+  "description": "Camp utility & operations monitoring — fuel, water, LPG, electricity tracking",
+  "start_url": "./CampUtilities.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#4361ee",
+  "lang": "en",
+  "categories": ["utilities", "productivity", "business"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Record",
+      "short_name": "New",
+      "description": "Add a new utility delivery record",
+      "url": "./CampUtilities.html#new",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View KPI dashboard",
+      "url": "./CampUtilities.html#dashboard",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    }
+  ]
+}

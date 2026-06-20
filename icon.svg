@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <!-- Tent triangle -->
+  <polygon points="256,72 52,400 460,400" fill="#4361ee"/>
+  <!-- Tent door -->
+  <path d="M214,400 Q214,322 256,322 Q298,322 298,400Z" fill="#0f172a"/>
+  <!-- Ground line -->
+  <rect x="40" y="400" width="432" height="12" rx="6" fill="#1e293b"/>
+  <!-- Water drop (left) -->
+  <path d="M104,200 C104,200 80,240 80,258 C80,272 91,282 104,282 C117,282 128,272 128,258 C128,240 104,200 104,200Z" fill="#38bdf8"/>
+  <!-- Lightning bolt (right) -->
+  <polygon points="410,180 388,238 406,238 384,298 430,222 408,222" fill="#fbbf24"/>
+  <!-- Flame top (LPG - center top) -->
+  <path d="M256,44 C248,44 236,54 236,66 C236,78 248,86 256,86 C264,86 276,78 276,66 C276,54 264,44 256,44Z" fill="#f97316" opacity="0.7"/>
+</svg>

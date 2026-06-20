@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Camp Utilities Tracker</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Camp Utils">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- /PWA -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root{--sw:220px;--pri:#4361ee;--sur:#f1f5f9;--card:#fff;--bdr:#e2e8f0;--txt:#1e293b;--mut:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var(--txt)}
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);background:#0f172a;color:#fff;z-index:300;display:flex;flex-direction:column;transition:transform .25s}
+.brand{padding:18px 16px 14px;font-size:.95rem;font-weight:700;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
+.brand .logo{font-size:1.5rem}
+#sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 16px;color:#94a3b8;text-decoration:none;font-size:.875rem;border-left:3px solid transparent;transition:all .15s}
+#sidebar nav a:hover,#sidebar nav a.active{color:#e2e8f0;background:rgba(255,255,255,.06);border-left-color:var(--pri)}
+#sidebar nav a i{width:20px;font-size:1rem}
+.sfooter{padding:12px 16px;font-size:.72rem;color:#475569;border-top:1px solid #1e293b;margin-top:auto}
+#main{margin-left:var(--sw);min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--bdr);padding:13px 22px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.topbar h1{font-size:1.1rem;font-weight:600;flex:1}
+#page{padding:22px}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:12px}
+.ct{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:10px}
+.kpi{border-radius:12px;padding:18px 20px;color:#fff;position:relative;overflow:hidden}
+.kpi-bg{position:absolute;right:-6px;top:-6px;font-size:3.5rem;opacity:.18}
+.kpi-val{font-size:1.9rem;font-weight:700;line-height:1.1}
+.kpi-lbl{font-size:.78rem;opacity:.88;margin-top:3px}
+.table th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:600;white-space:nowrap}
+.table td{font-size:.875rem;vertical-align:middle}
+.img-thumb{width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--bdr)}
+.cbadge{font-size:.73rem;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
+#drop-zone{border:2px dashed var(--bdr);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#fafbfc}
+#drop-zone:hover,#drop-zone.dragover{border-color:var(--pri);background:#eff3ff}
+#drop-zone i{font-size:2.5rem;color:var(--mut)}
+#preview-wrap{position:relative;display:none;margin-top:12px}
+#preview-img{width:100%;max-height:240px;object-fit:contain;border-radius:8px;border:1px solid var(--bdr)}
+#preview-clear{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.gauge-wrap{position:relative;width:130px;margin:0 auto 4px}
+.gauge-val{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);font-size:1.05rem;font-weight:700}
+#bnav{display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;z-index:300;border-top:1px solid #1e293b}
+#bnav a{flex:1;display:flex;flex-direction:column;align-items:center;padding:7px 2px;color:#64748b;text-decoration:none;font-size:.6rem;gap:2px}
+#bnav a i{font-size:1.2rem}
+#bnav a.active{color:#818cf8}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:none;box-shadow:6px 0 24px rgba(0,0,0,.4)}
+  #main{margin-left:0;padding-bottom:68px}
+  #bnav{display:flex}
+  #page{padding:12px}
+  .topbar{padding:11px 12px}
+}
+#ovbg{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;display:none}
+#ovbg.show{display:block}
+#spinner{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff}
+#spinner.show{display:flex}
+.app-toast{position:fixed;bottom:76px;right:16px;z-index:8888;padding:10px 18px;border-radius:8px;font-size:.875rem;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fadeUp .25s ease;max-width:90vw}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sbar{font-size:.78rem;min-height:18px}
+</style>
+</head>
+<body>
+<div id="ovbg" onclick="closeSB()"></div>
+<div id="sidebar">
+  <div class="brand"><span class="logo">&#9978;</span><span id="brand-name">Camp Utilities</span></div>
+  <nav>
+    <a class="nl active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a>
+    <a class="nl" data-page="new"><i class="bi bi-plus-circle"></i>New Record</a>
+    <a class="nl" data-page="records"><i class="bi bi-table"></i>Records</a>
+    <a class="nl" data-page="categories"><i class="bi bi-tags"></i>Categories</a>
+    <a class="nl" data-page="settings"><i class="bi bi-gear"></i>Settings</a>
+  </nav>
+  <div class="sfooter">Tap Settings to set API key</div>
+</div>
+<div id="main">
+  <div class="topbar">
+    <button class="btn btn-sm d-md-none me-1 px-2" onclick="openSB()"><i class="bi bi-list fs-5"></i></button>
+    <h1 id="ptitle">Dashboard</h1>
+    <button id="install-btn" class="btn btn-outline-success btn-sm align-items-center gap-1 me-2" onclick="installApp()" style="display:none"><i class="bi bi-download"></i> Install App</button>
+    <button class="btn btn-primary btn-sm d-none d-md-flex align-items-center gap-1" onclick="goPage('new')"><i class="bi bi-plus-lg"></i> New Record</button>
+  </div>
+  <div id="page">
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard">
+      <div class="row g-3 mb-3" id="kpi-row"></div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-7"><div class="card p-3 h-100">
+          <div class="ct">30-Day Delivery Trend</div>
+          <div id="trend-empty" class="d-flex flex-column align-items-center justify-content-center text-muted py-4" style="min-height:130px">
+            <i class="bi bi-bar-chart fs-1"></i><div class="mt-2 small">No deliveries in last 30 days</div>
+            <button class="btn btn-outline-primary btn-sm mt-3" onclick="goPage('new')">+ Add First Record</button>
+          </div>
+          <canvas id="trend-chart" height="110" style="display:none"></canvas>
+        </div></div>
+        <div class="col-md-5"><div class="card p-3 h-100">
+          <div class="ct">Category Breakdown</div>
+          <div id="donut-empty" class="d-flex align-items-center justify-content-center text-muted" style="min-height:130px">
+            <div class="text-center small"><i class="bi bi-pie-chart fs-1"></i><br>No data yet</div>
+          </div>
+          <canvas id="donut-chart" height="150" style="display:none"></canvas>
+        </div></div>
+      </div>
+      <div class="row g-3 mb-3" id="gauge-row"></div>
+      <div class="card p-3">
+        <div class="ct">Recent Records</div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Date</th><th>Category</th><th>Qty</th><th>Supplier</th><th>Image</th></tr></thead>
+            <tbody id="dash-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- NEW RECORD -->
+    <div id="pg-new" style="display:none">
+      <div class="row g-3">
+        <div class="col-md-5"><div class="card p-3 h-100 d-flex flex-column gap-3">
+          <div class="ct mb-0">Capture / Upload Image</div>
+          <label class="btn btn-outline-primary w-100" for="cam-input"><i class="bi bi-camera-fill me-1"></i>Take Photo (Mobile Camera)</label>
+          <input type="file" id="cam-input" accept="image/*" capture="environment" hidden>
+          <div id="drop-zone"><i class="bi bi-cloud-arrow-up"></i>
+            <p class="text-muted small mt-2 mb-0">Click or drag &amp; drop image here</p>
+            <input type="file" id="file-input" accept="image/*" hidden>
+          </div>
+          <div id="preview-wrap"><img id="preview-img" alt="Preview">
+            <button id="preview-clear" onclick="clearImg()" title="Remove">&#x2715;</button>
+          </div>
+          <button class="btn btn-success w-100" id="extract-btn" onclick="runExtract()" disabled><i class="bi bi-magic me-1"></i>Extract Data with AI</button>
+          <div id="sbar" class="sbar text-muted text-center"></div>
+        </div></div>
+        <div class="col-md-7"><div class="card p-3">
+          <div class="ct mb-2">Record Details</div>
+          <form id="rec-form" onsubmit="saveRecord(event)" autocomplete="off">
+            <div class="mb-3"><label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+              <select class="form-select" id="f-cat" required onchange="onCatChange()"><option value="">— Select —</option></select></div>
+            <div class="row g-2 mb-3">
+              <div class="col-7"><label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="f-qty" required placeholder="e.g. 32000*2=" onkeyup="onQtyKey(event,'f-qty')">
+                  <button type="button" class="btn btn-outline-secondary px-2" onclick="evalQty('f-qty')"><i class="bi bi-calculator"></i></button>
+                </div>
+                <div id="f-qty-hint" class="sbar text-success fw-semibold"></div>
+              </div>
+              <div class="col-5"><label class="form-label fw-semibold">Unit</label>
+                <input type="text" class="form-control" id="f-unit" placeholder="Liters"></div>
+            </div>
+            <div class="mb-3"><label class="form-label fw-semibold">Delivery Date</label>
+              <input type="date" class="form-control" id="f-date"></div>
+            <div class="mb-3"><label class="form-label fw-semibold">Supplier / Vendor</label>
+              <input type="text" class="form-control" id="f-supplier"></div>
+            <div class="mb-3"><label class="form-label fw-semibold">Vehicle / Truck #</label>
+              <input type="text" class="form-control" id="f-vehicle"></div>
+            <div class="mb-3"><label class="form-label fw-semibold">Notes</label>
+              <textarea class="form-control" id="f-notes" rows="2"></textarea></div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Record</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearForm()">Clear Form</button>
+            </div>
+          </form>
+        </div></div>
+      </div>
+    </div>
+    <!-- RECORDS -->
+    <div id="pg-records" style="display:none">
+      <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-sm-3"><label class="form-label small">Category</label>
+            <select class="form-select form-select-sm" id="fil-cat" onchange="renderRecords()"><option value="">All</option></select></div>
+          <div class="col-6 col-sm-2"><label class="form-label small">From</label>
+            <input type="date" class="form-control form-control-sm" id="fil-from" onchange="renderRecords()"></div>
+          <div class="col-6 col-sm-2"><label class="form-label small">To</label>
+            <input type="date" class="form-control form-control-sm" id="fil-to" onchange="renderRecords()"></div>
+          <div class="col-6 col-sm-3"><label class="form-label small">Search</label>
+            <input type="text" class="form-control form-control-sm" id="fil-q" placeholder="Supplier, vehicle..." oninput="dbounce(renderRecords,400)()"></div>
+          <div class="col-12 col-sm-2"><div class="dropdown">
+            <button class="btn btn-outline-success btn-sm w-100 dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i> Export</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Excel (.xlsx)</a></li>
+              <li><a class="dropdown-item" href="#" onclick="exportCSV()"><i class="bi bi-filetype-csv me-2 text-primary"></i>CSV</a></li>
+              <li><a class="dropdown-item" href="#" onclick="exportHTML()"><i class="bi bi-file-earmark-richtext me-2 text-danger"></i>HTML Report</a></li>
+            </ul>
+          </div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>#</th><th>Date</th><th>Category</th><th>Qty</th><th>Unit</th><th>Supplier</th><th>Vehicle #</th><th>Notes</th><th>Image</th><th></th></tr></thead>
+            <tbody id="rec-tbody"></tbody>
+          </table>
+        </div>
+        <div class="d-flex align-items-center gap-3 p-3 border-top flex-wrap">
+          <span class="text-muted small" id="rec-count">—</span>
+          <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="btn-prev" onclick="changePage(-1)">&#8249;</button>
+            <button class="btn btn-outline-secondary btn-sm" id="btn-next" onclick="changePage(1)">&#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- CATEGORIES -->
+    <div id="pg-categories" style="display:none">
+      <div class="row g-3">
+        <div class="col-md-4"><div class="card p-3">
+          <div class="ct">Add New Category</div>
+          <form onsubmit="addCat(event)">
+            <div class="mb-2"><label class="form-label small">Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="c-name" required placeholder="e.g. Generator Fuel"></div>
+            <div class="mb-2"><label class="form-label small">Unit <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="c-unit" required placeholder="e.g. Liters, kg, m3"></div>
+            <div class="row g-2 mb-3">
+              <div class="col-7"><label class="form-label small">Icon (emoji)</label>
+                <input type="text" class="form-control form-control-sm" id="c-icon" value="📦" maxlength="4"></div>
+              <div class="col-5"><label class="form-label small">Color</label>
+                <input type="color" class="form-control form-control-color form-control-sm w-100" id="c-color" value="#4361ee"></div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-plus-lg me-1"></i>Add Category</button>
+          </form>
+        </div></div>
+        <div class="col-md-8"><div class="card p-3">
+          <div class="ct">Utility Categories</div>
+          <div id="cat-list" class="row g-2"></div>
+        </div></div>
+      </div>
+    </div>
+    <!-- SETTINGS -->
+    <div id="pg-settings" style="display:none">
+      <div class="row g-3">
+        <div class="col-md-6"><div class="card p-3">
+          <div class="ct">General Settings</div>
+          <div class="mb-3"><label class="form-label">Camp / Site Name</label>
+            <input type="text" class="form-control" id="s-camp" placeholder="e.g. Base Camp Alpha"></div>
+          <div class="mb-3">
+            <label class="form-label">Anthropic API Key <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <input type="password" class="form-control" id="s-key" placeholder="sk-ant-...">
+              <button class="btn btn-outline-secondary" type="button" onclick="toggleKey()"><i class="bi bi-eye"></i></button>
+            </div>
+            <div class="form-text">Required for AI photo extraction. Get from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+          </div>
+          <div class="mb-3"><label class="form-label">Claude Model</label>
+            <select class="form-select" id="s-model">
+              <option value="claude-haiku-4-5-20251001">Claude Haiku (Fast, low cost)</option>
+              <option value="claude-sonnet-4-6">Claude Sonnet (Better accuracy)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()"><i class="bi bi-save me-1"></i>Save Settings</button>
+        </div></div>
+        <div class="col-md-6">
+          <div class="card p-3 mb-3">
+            <div class="ct">How to Use</div>
+            <ol class="small text-muted ps-3 mb-0" style="line-height:1.9">
+              <li>Enter your <strong>Anthropic API key</strong> above and save.</li>
+              <li>Go to <strong>New Record</strong>, tap camera or drag a photo.</li>
+              <li>Click <strong>Extract Data with AI</strong> — fields fill automatically.</li>
+              <li>Review then <strong>Save Record</strong>.</li>
+              <li>View in <strong>Records</strong> with filters and export.</li>
+            </ol>
+          </div>
+          <div class="card p-3">
+            <div class="ct">Storage &amp; Backup</div>
+            <div id="storage-status" class="alert alert-secondary py-2 px-3 mb-2" style="font-size:.8rem"></div>
+            <div id="db-size" class="small text-muted mb-3"></div>
+            <div class="d-flex gap-2 mb-2">
+              <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="exportBackup()"><i class="bi bi-download me-1"></i>Backup (JSON)</button>
+              <label class="btn btn-outline-primary btn-sm flex-grow-1 mb-0" for="restore-input"><i class="bi bi-upload me-1"></i>Restore</label>
+              <input type="file" id="restore-input" accept=".json" hidden onchange="restoreBackup(this)">
+            </div>
+            <button class="btn btn-outline-danger btn-sm w-100" onclick="clearAll()"><i class="bi bi-trash3 me-1"></i>Clear All Data (Reset)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav id="bnav">
+  <a class="bl active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a class="bl" data-page="new"><i class="bi bi-plus-circle-fill"></i>New</a>
+  <a class="bl" data-page="records"><i class="bi bi-table"></i>Records</a>
+  <a class="bl" data-page="categories"><i class="bi bi-tags"></i>Categories</a>
+  <a class="bl" data-page="settings"><i class="bi bi-gear"></i>Settings</a>
+</nav>
+<div class="modal fade" id="imgModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="background:#0f172a">
+      <div class="modal-header border-0 py-1 px-3">
+        <small class="text-muted" id="img-lbl"></small>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2 text-center">
+        <img id="modal-img" style="max-width:100%;max-height:82vh;border-radius:8px">
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold">Edit Record</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-2">
+        <input type="hidden" id="e-id">
+        <div class="mb-2"><label class="form-label small">Category</label>
+          <select class="form-select form-select-sm" id="e-cat"></select></div>
+        <div class="row g-2 mb-2">
+          <div class="col-7"><label class="form-label small">Quantity</label>
+            <div class="input-group input-group-sm">
+              <input type="text" inputmode="decimal" class="form-control" id="e-qty" placeholder="e.g. 500*3=" onkeyup="onQtyKey(event,'e-qty')">
+              <button type="button" class="btn btn-outline-secondary px-2" onclick="evalQty('e-qty')"><i class="bi bi-calculator"></i></button>
+            </div>
+            <div id="e-qty-hint" class="sbar text-success fw-semibold"></div>
+          </div>
+          <div class="col-5"><label class="form-label small">Unit</label>
+            <input type="text" class="form-control form-control-sm" id="e-unit"></div>
+        </div>
+        <div class="mb-2"><label class="form-label small">Delivery Date</label>
+          <input type="date" class="form-control form-control-sm" id="e-date"></div>
+        <div class="mb-2"><label class="form-label small">Supplier</label>
+          <input type="text" class="form-control form-control-sm" id="e-supplier"></div>
+        <div class="mb-2"><label class="form-label small">Vehicle #</label>
+          <input type="text" class="form-control form-control-sm" id="e-vehicle"></div>
+        <div class="mb-1"><label class="form-label small">Notes</label>
+          <textarea class="form-control form-control-sm" id="e-notes" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="updateRecord()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="spinner"><div class="spinner-border text-light" style="width:3rem;height:3rem"></div><div id="spin-msg">Processing...</div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════════════════
+// STORAGE — localStorage only (works everywhere, always persists)
+// Photos go to IndexedDB (too large for localStorage)
+// ══════════════════════════════════════════════════════════════════
+
+// Settings
+function getSetting(k,def){var v=localStorage.getItem('cu_s_'+k);return v!==null?v:(def||'');}
+function setSetting(k,v){localStorage.setItem('cu_s_'+k,v==null?'':String(v));}
+
+// Generic JSON store via localStorage
+var Store={
+  _key:function(s){return 'cu_store_'+s;},
+  _all:function(s){try{return JSON.parse(localStorage.getItem(this._key(s))||'[]');}catch(e){return[];}},
+  _save:function(s,arr){try{localStorage.setItem(this._key(s),JSON.stringify(arr));}catch(e){alert('Storage full! Export and clear old data.');}},
+  getAll:function(s){return this._all(s);},
+  get:function(s,id){return this._all(s).find(function(x){return x.id===id;})||null;},
+  add:function(s,item){
+    var arr=this._all(s);
+    var nid=parseInt(localStorage.getItem('cu_nid_'+s)||'1');
+    localStorage.setItem('cu_nid_'+s,nid+1);
+    item=Object.assign({},item,{id:nid});
+    arr.push(item);this._save(s,arr);return nid;
+  },
+  put:function(s,item){
+    var arr=this._all(s);
+    var i=arr.findIndex(function(x){return x.id===item.id;});
+    if(i>=0)arr[i]=item;else arr.push(item);
+    this._save(s,arr);
+  },
+  del:function(s,id){this._save(s,this._all(s).filter(function(x){return x.id!==id;}));}
+};
+
+// Photos — IndexedDB (binary data, localStorage can't hold them)
+var PhotoDB=(function(){
+  var _db=null;
+  function open(){
+    if(_db)return Promise.resolve(_db);
+    return new Promise(function(res,rej){
+      var req=indexedDB.open('CampPhotos',1);
+      req.onupgradeneeded=function(e){e.target.result.createObjectStore('photos',{keyPath:'id'});};
+      req.onsuccess=function(e){_db=e.target.result;res(_db);};
+      req.onerror=function(e){rej(e.target.error);};
+    });
+  }
+  function tx(mode,fn){
+    return open().then(function(db){
+      return new Promise(function(res,rej){
+        var t=db.transaction('photos',mode),s=t.objectStore('photos'),r=fn(s);
+        r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};
+      });
+    }).catch(function(){return null;});
+  }
+  return{
+    get:function(id){return tx('readonly',function(s){return s.get(id);});},
+    put:function(id,data){return tx('readwrite',function(s){return s.put({id:id,data:data});});},
+    del:function(id){return tx('readwrite',function(s){return s.delete(id);});}
+  };
+})();
+
+// ── App state ────────────────────────────────────────────────────
+var categories=[],chosenImage=null,recPage=0,PAGE=20;
+var trendChart=null,donutChart=null,gaugeCharts=[];
+
+// ── Navigation ───────────────────────────────────────────────────
+var PAGES={dashboard:'Dashboard',new:'New Record',records:'Records',categories:'Categories',settings:'Settings'};
+function goPage(name){
+  Object.keys(PAGES).forEach(function(p){document.getElementById('pg-'+p).style.display=(p===name)?'':'none';});
+  document.getElementById('ptitle').textContent=PAGES[name]||name;
+  document.querySelectorAll('[data-page]').forEach(function(a){a.classList.toggle('active',a.dataset.page===name);});
+  closeSB();
+  if(name==='dashboard')renderDashboard();
+  if(name==='records'){recPage=0;loadRecords();}
+  if(name==='categories')renderCats();
+  if(name==='settings')loadSettings();
+  if(name==='new'){loadCats();popCatSel('f-cat');}
+}
+function openSB(){document.getElementById('sidebar').classList.add('open');document.getElementById('ovbg').classList.add('show');}
+function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('ovbg').classList.remove('show');}
+document.querySelectorAll('[data-page]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();goPage(a.dataset.page);});});
+
+// ── Image helpers ─────────────────────────────────────────────────
+function compressImage(file){
+  return new Promise(function(res){
+    var img=new Image(),url=URL.createObjectURL(file);
+    img.onload=function(){
+      URL.revokeObjectURL(url);
+      var MAX=1000,w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cv.toBlob(function(blob){
+        var rd=new FileReader();
+        rd.onload=function(e){res({dataUrl:e.target.result,mimeType:'image/jpeg'});};
+        rd.readAsDataURL(blob);
+      },'image/jpeg',0.72);
+    };
+    img.src=url;
+  });
+}
+function onFileSelected(file){
+  if(!file||!file.type.startsWith('image/'))return;
+  showSpin('Preparing image...');
+  compressImage(file).then(function(img){
+    chosenImage=img;hideSpin();
+    document.getElementById('preview-img').src=img.dataUrl;
+    document.getElementById('preview-wrap').style.display='block';
+    document.getElementById('extract-btn').disabled=false;
+    setSbar('Image ready - click Extract or fill form manually.');
+  });
+}
+function clearImg(){
+  chosenImage=null;
+  document.getElementById('preview-wrap').style.display='none';
+  document.getElementById('preview-img').src='';
+  document.getElementById('extract-btn').disabled=true;
+  document.getElementById('cam-input').value='';
+  document.getElementById('file-input').value='';
+  setSbar('');
+}
+document.getElementById('cam-input').addEventListener('change',function(e){onFileSelected(e.target.files[0]);});
+document.getElementById('file-input').addEventListener('change',function(e){onFileSelected(e.target.files[0]);});
+var dz=document.getElementById('drop-zone');
+dz.addEventListener('click',function(){document.getElementById('file-input').click();});
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('dragover');});
+dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('dragover');onFileSelected(e.dataTransfer.files[0]);});
+
+// ── AI Extraction ─────────────────────────────────────────────────
+function runExtract(){
+  if(!chosenImage)return;
+  var apiKey=getSetting('api_key');
+  if(!apiKey){toast('Set your Anthropic API key in Settings first.','warning');goPage('settings');return;}
+  var model=getSetting('model','claude-haiku-4-5-20251001');
+  showSpin('Sending to AI...');
+  var base64=chosenImage.dataUrl.split(',')[1];
+  var prompt='Analyze this camp utility delivery image. Return ONLY valid JSON: {"quantity":number_or_null,"unit":"liters|kg|m3|kWh|null","category":"Fuel (Diesel)|Fuel (Petrol)|Water|LPG|Sewage|Waste|Electricity|Other","supplier":"name_or_null","vehicle_number":"plate_or_null","delivery_date":"YYYY-MM-DD_or_null","notes":"other_info_or_null"}';
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:model,max_tokens:512,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:chosenImage.mimeType,data:base64}},
+      {type:'text',text:prompt}
+    ]}]})
+  }).then(function(r){return r.json();}).then(function(data){
+    hideSpin();
+    if(data.error){setSbar('AI error: '+data.error.message);toast('AI error: '+data.error.message,'danger');return;}
+    var text=data.content[0].text.trim();
+    var match=text.match(/\{[\s\S]*\}/);
+    if(!match){setSbar('Could not parse AI response');return;}
+    fillExtract(JSON.parse(match[0]));
+    setSbar('AI extraction complete - review and save.');
+    toast('Fields filled! Review then save.');
+  }).catch(function(err){hideSpin();setSbar('Error: '+err.message);toast('Error: '+err.message,'danger');});
+}
+function fillExtract(ex){
+  loadCats();popCatSel('f-cat');
+  if(ex.category){var m=categories.find(function(c){return c.name.toLowerCase().includes(ex.category.toLowerCase().split(' ')[0]);});if(m){document.getElementById('f-cat').value=m.id;document.getElementById('f-unit').value=m.unit;}}
+  if(ex.quantity!=null)document.getElementById('f-qty').value=ex.quantity;
+  if(ex.unit)document.getElementById('f-unit').value=ex.unit;
+  if(ex.supplier)document.getElementById('f-supplier').value=ex.supplier;
+  if(ex.vehicle_number)document.getElementById('f-vehicle').value=ex.vehicle_number;
+  if(ex.delivery_date)document.getElementById('f-date').value=ex.delivery_date;
+  if(ex.notes)document.getElementById('f-notes').value=ex.notes;
+}
+
+// ── Save Record ───────────────────────────────────────────────────
+function saveRecord(e){
+  e.preventDefault();
+  var catSel=document.getElementById('f-cat');
+  var catOpt=catSel.options[catSel.selectedIndex];
+  var catId=parseInt(catSel.value)||null;
+  var cat=categories.find(function(c){return c.id===catId;});
+  var qtyRaw=document.getElementById('f-qty').value;
+  var qty=safeCalc(qtyRaw)||parseFloat(qtyRaw)||null;
+  var record={
+    category_id:catId,
+    category_name:(catOpt?catOpt.text:'').replace(/^.\s*/,'').trim(),
+    color:cat?cat.color:'#888',icon:cat?cat.icon:'',
+    quantity:qty,unit:document.getElementById('f-unit').value.trim(),
+    delivery_date:document.getElementById('f-date').value,
+    supplier:document.getElementById('f-supplier').value.trim(),
+    vehicle_number:document.getElementById('f-vehicle').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    hasImage:!!chosenImage,
+    recorded_at:new Date().toISOString()
+  };
+  var newId=Store.add('records',record);
+  if(chosenImage&&newId){
+    PhotoDB.put(newId,chosenImage.dataUrl).catch(function(err){
+      toast('Record saved but photo storage failed: '+err.message,'warning');
+    });
+  }
+  toast('Record saved!','success');
+  clearForm();
+  goPage('records');
+}
+function clearForm(){document.getElementById('rec-form').reset();clearImg();document.getElementById('f-date').valueAsDate=new Date();}
+function onCatChange(){var sel=document.getElementById('f-cat');var cat=categories.find(function(c){return c.id==sel.value;});if(cat)document.getElementById('f-unit').value=cat.unit;}
+
+// ── Categories ────────────────────────────────────────────────────
+function loadCats(){categories=Store.getAll('categories');return categories;}
+function popCatSel(id){
+  var sel=document.getElementById(id),cur=sel.value;
+  sel.innerHTML='<option value="">- Select -</option>';
+  categories.forEach(function(c){var o=new Option(c.icon+' '+c.name,c.id);if(c.id==cur)o.selected=true;sel.appendChild(o);});
+}
+function renderCats(){
+  loadCats();
+  document.getElementById('cat-list').innerHTML=categories.length?categories.map(function(c){
+    return '<div class="col-sm-6"><div class="d-flex align-items-center gap-2 p-2 border rounded-3 bg-white">'
+      +'<span class="fs-3">'+c.icon+'</span>'
+      +'<div class="flex-grow-1"><div class="fw-semibold" style="font-size:.875rem">'+c.name+'</div>'
+      +'<div class="text-muted" style="font-size:.73rem">'+c.unit+'</div></div>'
+      +'<div style="width:14px;height:14px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>'
+      +'<button class="btn btn-link text-danger p-0 ms-1" style="font-size:.85rem" onclick="delCat('+c.id+')"><i class="bi bi-trash3"></i></button>'
+      +'</div></div>';
+  }).join(''):'<div class="col-12 text-muted small">No categories yet.</div>';
+}
+function addCat(e){
+  e.preventDefault();
+  Store.add('categories',{name:document.getElementById('c-name').value.trim(),unit:document.getElementById('c-unit').value.trim(),icon:document.getElementById('c-icon').value.trim()||'📦',color:document.getElementById('c-color').value});
+  loadCats();e.target.reset();document.getElementById('c-icon').value='📦';renderCats();toast('Category added!');
+}
+function delCat(id){
+  if(!confirm('Delete this category?'))return;
+  Store.del('categories',id);loadCats();renderCats();toast('Deleted');
+}
+
+// ── Records Table ─────────────────────────────────────────────────
+function loadRecords(){
+  recPage=0;loadCats();
+  var sel=document.getElementById('fil-cat'),cur=sel.value;
+  sel.innerHTML='<option value="">All Categories</option>';
+  categories.forEach(function(c){var o=new Option(c.icon+' '+c.name,c.id);if(c.id==cur)o.selected=true;sel.appendChild(o);});
+  renderRecords();
+}
+function renderRecords(){
+  var catId=(document.getElementById('fil-cat')||{}).value||'';
+  var from=(document.getElementById('fil-from')||{}).value||'';
+  var to=(document.getElementById('fil-to')||{}).value||'';
+  var q=((document.getElementById('fil-q')||{}).value||'').toLowerCase();
+  var rows=Store.getAll('records');
+  if(catId)rows=rows.filter(function(r){return r.category_id==catId;});
+  if(from)rows=rows.filter(function(r){return r.delivery_date>=from;});
+  if(to)rows=rows.filter(function(r){return r.delivery_date<=to;});
+  if(q)rows=rows.filter(function(r){return(r.supplier||'').toLowerCase().includes(q)||(r.vehicle_number||'').toLowerCase().includes(q)||(r.category_name||'').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q);});
+  rows.sort(function(a,b){return(b.recorded_at||'').localeCompare(a.recorded_at||'');});
+  var total=rows.length,page=rows.slice(recPage*PAGE,(recPage+1)*PAGE);
+  document.getElementById('rec-tbody').innerHTML=page.length?page.map(function(r){
+    return '<tr><td class="text-muted small">'+r.id+'</td><td>'+(r.delivery_date||'-')+'</td>'
+      +'<td><span class="cbadge" style="background:'+(r.color||'#888')+'">'+(r.icon||'')+' '+(r.category_name||'-')+'</span></td>'
+      +'<td class="fw-semibold">'+fmt(r.quantity)+'</td><td class="text-muted small">'+(r.unit||'-')+'</td>'
+      +'<td>'+(r.supplier||'-')+'</td><td>'+(r.vehicle_number||'-')+'</td>'
+      +'<td class="text-muted small" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'-')+'</td>'
+      +'<td id="img-'+r.id+'">'+(r.hasImage?'<span class="text-muted small">...</span>':'-')+'</td>'
+      +'<td><button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" onclick="openEdit('+r.id+')"><i class="bi bi-pencil"></i></button>'
+      +'<button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="delRecord('+r.id+')"><i class="bi bi-trash3"></i></button></td></tr>';
+  }).join(''):'<tr><td colspan="10" class="text-center text-muted py-4">No records found</td></tr>';
+  page.filter(function(r){return r.hasImage;}).forEach(function(r){
+    PhotoDB.get(r.id).then(function(url){
+      var cell=document.getElementById('img-'+r.id);
+      if(cell&&url)cell.innerHTML='<img src="'+url+'" class="img-thumb" onclick="viewPhoto('+r.id+')">';
+    });
+  });
+  document.getElementById('rec-count').textContent=total?(recPage*PAGE+1)+'-'+Math.min((recPage+1)*PAGE,total)+' of '+total+' records':'0 records';
+  document.getElementById('btn-prev').disabled=recPage===0;
+  document.getElementById('btn-next').disabled=(recPage+1)*PAGE>=total;
+}
+function changePage(d){recPage=Math.max(0,recPage+d);renderRecords();}
+function viewPhoto(id){
+  PhotoDB.get(id).then(function(url){
+    if(!url)return;
+    var r=Store.get('records',id);
+    document.getElementById('modal-img').src=url;
+    document.getElementById('img-lbl').textContent=(r?r.category_name+' - '+r.delivery_date+' - '+r.supplier:'');
+    new bootstrap.Modal(document.getElementById('imgModal')).show();
+  });
+}
+function openEdit(id){
+  var r=Store.get('records',parseInt(id));if(!r)return;
+  document.getElementById('e-id').value=r.id;
+  document.getElementById('e-qty').value=r.quantity!=null?r.quantity:'';
+  document.getElementById('e-unit').value=r.unit||'';
+  document.getElementById('e-date').value=r.delivery_date||'';
+  document.getElementById('e-supplier').value=r.supplier||'';
+  document.getElementById('e-vehicle').value=r.vehicle_number||'';
+  document.getElementById('e-notes').value=r.notes||'';
+  loadCats();popCatSel('e-cat');document.getElementById('e-cat').value=r.category_id||'';
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+function updateRecord(){
+  var id=parseInt(document.getElementById('e-id').value);
+  var existing=Store.get('records',id);if(!existing)return;
+  var catSel=document.getElementById('e-cat'),catOpt=catSel.options[catSel.selectedIndex];
+  var catId=parseInt(catSel.value)||null,cat=categories.find(function(c){return c.id===catId;});
+  var qtyRaw=document.getElementById('e-qty').value;
+  Store.put('records',Object.assign({},existing,{
+    category_id:catId,category_name:(catOpt?catOpt.text:'').replace(/^.\s*/,'').trim(),
+    color:cat?cat.color:existing.color,icon:cat?cat.icon:existing.icon,
+    quantity:safeCalc(qtyRaw)||parseFloat(qtyRaw)||null,
+    unit:document.getElementById('e-unit').value.trim(),
+    delivery_date:document.getElementById('e-date').value,
+    supplier:document.getElementById('e-supplier').value.trim(),
+    vehicle_number:document.getElementById('e-vehicle').value.trim(),
+    notes:document.getElementById('e-notes').value.trim()
+  }));
+  bootstrap.Modal.getInstance(document.getElementById('editModal'))?.hide();
+  toast('Record updated!');renderRecords();
+}
+function delRecord(id){
+  if(!confirm('Delete this record?'))return;
+  Store.del('records',parseInt(id));PhotoDB.del(parseInt(id)).catch(function(){});
+  toast('Deleted');renderRecords();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────
+var COLORS=['#4361ee','#e63946','#0077b6','#f77f00','#588157','#6d6875','#ffd60a','#e76f51','#2a9d8f'];
+function kpiCard(color,icon,val,lbl){
+  return '<div class="col-6 col-md-3"><div class="kpi" style="background:linear-gradient(135deg,'+color+','+color+'bb)">'
+    +'<div class="kpi-bg"><i class="bi '+icon+'"></i></div>'
+    +'<div class="kpi-val">'+val+'</div><div class="kpi-lbl">'+lbl+'</div></div></div>';
+}
+function renderDashboard(){
+  var records=Store.getAll('records'),cats=Store.getAll('categories');
+  var now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var thisMonth=records.filter(function(r){return(r.recorded_at||'').startsWith(ym);}).length;
+  var totalQty=records.reduce(function(s,r){return s+(Number(r.quantity)||0);},0);
+  document.getElementById('kpi-row').innerHTML=
+    kpiCard('#4361ee','bi-archive',records.length,'Total Records')+
+    kpiCard('#0077b6','bi-calendar3',thisMonth,'This Month')+
+    kpiCard('#e63946','bi-tags',cats.length,'Categories')+
+    kpiCard('#588157','bi-droplet-half',fmt(totalQty),'Total Units Received');
+  var bycat=cats.map(function(c,i){
+    var cr=records.filter(function(r){return r.category_id===c.id;});
+    return{id:c.id,name:c.name,unit:c.unit,icon:c.icon||'',color:c.color||COLORS[i%COLORS.length],
+      count:cr.length,total:cr.reduce(function(s,r){return s+(Number(r.quantity)||0);},0)};
+  }).sort(function(a,b){return b.total-a.total;});
+  // Trend
+  var cutoff=new Date(now-30*864e5).toISOString().slice(0,10);
+  var tr=records.filter(function(r){return r.delivery_date&&r.delivery_date>=cutoff;});
+  var days=[...new Set(tr.map(function(r){return r.delivery_date;}))].sort();
+  var catNames=[...new Set(tr.map(function(r){return r.category_name;}).filter(Boolean))];
+  if(trendChart){try{trendChart.destroy();}catch(e){}trendChart=null;}
+  var tc=document.getElementById('trend-chart'),te=document.getElementById('trend-empty');
+  if(days.length===0){tc.style.display='none';te.style.display='';}
+  else{
+    te.style.display='none';tc.style.display='';
+    trendChart=new Chart(tc.getContext('2d'),{type:'line',
+      data:{labels:days.map(function(d){return d.slice(5);}),datasets:catNames.map(function(cn,i){
+        var col=(bycat.find(function(c){return c.name===cn;})||{color:COLORS[i%COLORS.length]}).color;
+        return{label:cn,data:days.map(function(d){return tr.filter(function(r){return r.delivery_date===d&&r.category_name===cn;}).reduce(function(a,r){return a+(Number(r.quantity)||0);},0)||null;}),
+          borderColor:col,backgroundColor:col+'28',tension:.35,fill:true,spanGaps:true,pointRadius:3};
+      })},
+      options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+    });
+  }
+  // Donut
+  var active=bycat.filter(function(c){return c.total>0;});
+  if(donutChart){try{donutChart.destroy();}catch(e){}donutChart=null;}
+  var dc=document.getElementById('donut-chart'),de=document.getElementById('donut-empty');
+  if(active.length===0){dc.style.display='none';de.style.display='';}
+  else{
+    de.style.display='none';dc.style.display='';
+    donutChart=new Chart(dc.getContext('2d'),{type:'doughnut',
+      data:{labels:active.map(function(c){return c.name;}),datasets:[{data:active.map(function(c){return c.total;}),backgroundColor:active.map(function(c){return c.color;}),borderWidth:2}]},
+      options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
+    });
+  }
+  // Gauges
+  gaugeCharts.forEach(function(c){try{c.destroy();}catch(e){}});gaugeCharts=[];
+  var maxC=Math.max.apply(null,bycat.map(function(c){return c.count;}).concat([1]));
+  document.getElementById('gauge-row').innerHTML=bycat.slice(0,4).map(function(c){
+    var pct=Math.round((c.count/maxC)*100);
+    return '<div class="col-6 col-md-3"><div class="card p-3 text-center">'
+      +'<div class="ct">'+c.icon+' '+c.name+'</div>'
+      +'<div class="gauge-wrap"><canvas class="gc" data-pct="'+pct+'" data-color="'+c.color+'" width="130" height="80"></canvas>'
+      +'<div class="gauge-val">'+pct+'%</div></div>'
+      +'<div class="mt-2 small text-muted">'+fmt(c.total)+' '+c.unit+' &middot; '+c.count+' records</div>'
+      +'</div></div>';
+  }).join('');
+  document.querySelectorAll('.gc').forEach(function(cv){
+    var pct=Number(cv.dataset.pct)||0,col=cv.dataset.color||'#4361ee';
+    var ch=new Chart(cv.getContext('2d'),{type:'doughnut',
+      data:{datasets:[{data:[pct,100-pct],backgroundColor:[col,'#e2e8f0'],borderWidth:0,circumference:180,rotation:270}]},
+      options:{responsive:false,plugins:{legend:{display:false},tooltip:{enabled:false}},cutout:'70%'}
+    });
+    gaugeCharts.push(ch);
+  });
+  // Recent
+  var recent=records.slice().sort(function(a,b){return(b.recorded_at||'').localeCompare(a.recorded_at||'');}).slice(0,5);
+  document.getElementById('dash-tbody').innerHTML=recent.length?recent.map(function(r){
+    return '<tr><td>'+(r.delivery_date||'-')+'</td>'
+      +'<td><span class="cbadge" style="background:'+(r.color||'#888')+'">'+(r.icon||'')+' '+(r.category_name||'-')+'</span></td>'
+      +'<td>'+fmt(r.quantity)+' '+(r.unit||'')+'</td>'
+      +'<td>'+(r.supplier||'-')+'</td>'
+      +'<td id="dash-img-'+r.id+'">'+(r.hasImage?'<span class="text-muted small">...</span>':'-')+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" class="text-center py-4 text-muted">No records yet</td></tr>';
+  recent.filter(function(r){return r.hasImage;}).forEach(function(r){
+    PhotoDB.get(r.id).then(function(url){
+      var cell=document.getElementById('dash-img-'+r.id);
+      if(cell&&url)cell.innerHTML='<img src="'+url+'" class="img-thumb" onclick="viewPhoto('+r.id+')">';
+    });
+  });
+}
+
+// ── Settings ──────────────────────────────────────────────────────
+function checkStorage(){
+  var el=document.getElementById('storage-status');
+  if(!el)return;
+  try{
+    localStorage.setItem('cu_test','ok');
+    var v=localStorage.getItem('cu_test');
+    localStorage.removeItem('cu_test');
+    if(v==='ok'){
+      var apiSaved=getSetting('api_key');
+      el.className='alert alert-success py-2 px-3 mb-2';
+      el.style.fontSize='.8rem';
+      el.innerHTML='<i class="bi bi-check-circle-fill me-1"></i><strong>Storage: Working</strong>'
+        +(apiSaved?' &nbsp;&bull;&nbsp; API key saved ('+apiSaved.length+' chars)':' &nbsp;&bull;&nbsp; API key: <em>not saved yet</em>');
+    }else{
+      el.className='alert alert-danger py-2 px-3 mb-2';
+      el.innerHTML='<i class="bi bi-x-circle-fill me-1"></i><strong>Storage: Read failed</strong> — data cannot be saved in this browser';
+    }
+  }catch(e){
+    el.className='alert alert-danger py-2 px-3 mb-2';
+    el.innerHTML='<i class="bi bi-x-circle-fill me-1"></i><strong>Storage blocked:</strong> '+e.message
+      +'<br><small>Try opening in Chrome or Edge, or deploy to Netlify.</small>';
+  }
+}
+function loadSettings(){
+  document.getElementById('s-camp').value=getSetting('camp_name');
+  document.getElementById('s-key').value=getSetting('api_key');
+  document.getElementById('s-model').value=getSetting('model','claude-haiku-4-5-20251001');
+  var recs=Store.getAll('records');
+  document.getElementById('db-size').textContent=recs.length+' records, '+Store.getAll('categories').length+' categories, '+recs.filter(function(r){return r.hasImage;}).length+' with photos';
+  checkStorage();
+}
+function saveSettings(){
+  setSetting('camp_name',document.getElementById('s-camp').value.trim());
+  setSetting('api_key',document.getElementById('s-key').value.trim());
+  setSetting('model',document.getElementById('s-model').value);
+  var name=document.getElementById('s-camp').value.trim()||'Camp Utilities';
+  document.getElementById('brand-name').textContent=name;document.title=name+' Tracker';
+  checkStorage();
+  toast('Settings saved! ✔ API key stored ('+getSetting('api_key').length+' chars)','success');
+}
+function toggleKey(){var el=document.getElementById('s-key');el.type=el.type==='password'?'text':'password';}
+function clearAll(){
+  if(!confirm('Delete ALL records, categories and settings?'))return;
+  if(!confirm('Last chance - cannot be undone. Continue?'))return;
+  localStorage.clear();indexedDB.deleteDatabase('CampPhotos');
+  toast('Cleared. Reloading...','warning');setTimeout(function(){location.reload();},1200);
+}
+function exportBackup(){
+  var data={version:1,exported:new Date().toISOString(),categories:Store.getAll('categories'),records:Store.getAll('records'),settings:{camp_name:getSetting('camp_name'),model:getSetting('model')}};
+  dlFile('camp_backup_'+today()+'.json','application/json',JSON.stringify(data,null,2));toast('Backup downloaded!');
+}
+function restoreBackup(input){
+  var file=input.files[0];if(!file)return;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      if(!data.records||!data.categories){toast('Invalid backup file','danger');return;}
+      if(!confirm('Replace ALL current data?'))return;
+      localStorage.clear();
+      if(data.settings){setSetting('camp_name',data.settings.camp_name||'');setSetting('model',data.settings.model||'claude-haiku-4-5-20251001');}
+      data.categories.forEach(function(c){Store.add('categories',c);});
+      data.records.forEach(function(r){Store.add('records',r);});
+      toast('Restored '+data.records.length+' records!','success');location.reload();
+    }catch(ex){toast('Restore error: '+ex.message,'danger');}
+  };
+  rd.readAsText(file);input.value='';
+}
+
+// ── Export ────────────────────────────────────────────────────────
+function exportExcel(){
+  var records=Store.getAll('records'),cats=Store.getAll('categories'),camp=getSetting('camp_name','Camp');
+  var header=['#','Date','Category','Quantity','Unit','Supplier','Vehicle #','Notes','Has Photo','Recorded At'];
+  var data=[header].concat(records.map(function(r){return[r.id,r.delivery_date,r.category_name,r.quantity,r.unit,r.supplier,r.vehicle_number,r.notes,r.hasImage?'Yes':'No',(r.recorded_at||'').slice(0,19)];}));
+  var wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[5,12,18,10,8,20,14,28,10,20].map(function(w){return{wch:w};});
+  XLSX.utils.book_append_sheet(wb,ws,'Records');
+  var sum=[['Category','Unit','Records','Total Qty']].concat(cats.map(function(c){var cr=records.filter(function(r){return r.category_id===c.id;});return[c.name,c.unit,cr.length,cr.reduce(function(s,r){return s+(Number(r.quantity)||0);},0)];}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
+  XLSX.writeFile(wb,(camp||'Camp').replace(/\s+/g,'_')+'_records_'+today()+'.xlsx');toast('Excel downloaded!');
+}
+function exportCSV(){
+  var records=Store.getAll('records');
+  var esc=function(v){return v==null?'':'"'+String(v).replace(/"/g,'""')+'"';};
+  var lines=records.map(function(r){return[r.id,r.delivery_date,r.category_name,r.quantity,r.unit,r.supplier,r.vehicle_number,r.notes,r.hasImage?'Yes':'No',(r.recorded_at||'').slice(0,19)].map(esc).join(',');});
+  dlFile('utility_records_'+today()+'.csv','text/csv','ID,Date,Category,Quantity,Unit,Supplier,Vehicle#,Notes,Has Photo,Recorded At\n'+lines.join('\n'));toast('CSV downloaded!');
+}
+function exportHTML(){
+  var records=Store.getAll('records'),camp=getSetting('camp_name','Camp');
+  var promises=records.map(function(r){return r.hasImage?PhotoDB.get(r.id):Promise.resolve(null);});
+  Promise.all(promises).then(function(photos){
+    var rows=records.slice().sort(function(a,b){return(b.delivery_date||'').localeCompare(a.delivery_date||'');}).map(function(r){
+      var photoUrl=photos[records.indexOf(r)];
+      return '<tr><td>'+r.id+'</td><td>'+(r.delivery_date||'-')+'</td>'
+        +'<td><span style="background:'+(r.color||'#888')+';color:#fff;padding:2px 8px;border-radius:12px;font-size:.8rem">'+(r.icon||'')+' '+(r.category_name||'-')+'</span></td>'
+        +'<td><strong>'+fmt(r.quantity)+'</strong> '+(r.unit||'')+'</td>'
+        +'<td>'+(r.supplier||'-')+'</td><td>'+(r.vehicle_number||'-')+'</td><td>'+(r.notes||'-')+'</td>'
+        +'<td>'+(photoUrl?'<img src="'+photoUrl+'" style="max-width:110px;max-height:90px;border-radius:6px">':'-')+'</td></tr>';
+    }).join('');
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+camp+'</title>'
+      +'<style>body{font-family:Segoe UI,sans-serif;margin:24px}h1{color:#4361ee}table{border-collapse:collapse;width:100%;font-size:.875rem}'
+      +'th{background:#4361ee;color:#fff;padding:8px 10px;text-align:left}td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle}'
+      +'tr:nth-child(even) td{background:#f8fafc}</style></head><body>'
+      +'<h1>'+camp+' - Utility Records</h1><p style="color:#64748b;font-size:.85rem">Generated: '+new Date().toLocaleString()+' | '+records.length+' records</p>'
+      +'<table><thead><tr><th>#</th><th>Date</th><th>Category</th><th>Qty</th><th>Supplier</th><th>Vehicle #</th><th>Notes</th><th>Photo</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></body></html>';
+    dlFile((camp||'Camp').replace(/\s+/g,'_')+'_report_'+today()+'.html','text/html',html);toast('HTML report downloaded!');
+  });
+}
+
+// ── Calculator ────────────────────────────────────────────────────
+function safeCalc(expr){
+  if(!expr)return null;
+  var clean=String(expr).replace(/=+$/,'').trim();
+  if(!clean)return null;
+  if(!/^[\d\s\+\-\*\/\.\(\)]+$/.test(clean))return null;
+  try{var r=Function('"use strict";return('+clean+')')();if(typeof r==='number'&&isFinite(r)&&r>=0)return parseFloat(r.toFixed(8));}catch(e){}
+  return null;
+}
+function evalQty(id){
+  var input=document.getElementById(id),hint=document.getElementById(id+'-hint'),val=input.value.trim();
+  if(!val)return;
+  var result=safeCalc(val);
+  if(result!==null){
+    if(hint)hint.textContent=val.replace(/=+$/,'')+'  =  '+result.toLocaleString();
+    input.value=result;input.style.borderColor='#198754';
+    setTimeout(function(){input.style.borderColor='';if(hint)hint.textContent='';},3000);
+  }else{
+    if(hint){hint.textContent='Invalid expression';hint.style.color='#dc3545';setTimeout(function(){hint.textContent='';hint.style.color='';},2000);}
+  }
+}
+function onQtyKey(e,id){
+  var val=e.target.value,hint=document.getElementById(id+'-hint');
+  if(e.key==='Enter'||val.endsWith('=')){evalQty(id);return;}
+  if(/[\+\-\*\/]/.test(val)){var r=safeCalc(val);if(r!==null&&hint){hint.textContent='= '+r.toLocaleString(undefined,{maximumFractionDigits:4});hint.style.color='#198754';}else if(hint)hint.textContent='';}
+  else if(hint)hint.textContent='';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function fmt(n){if(n==null||n==='')return '-';return Number(n).toLocaleString(undefined,{maximumFractionDigits:2});}
+function today(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
+function setSbar(msg){document.getElementById('sbar').textContent=msg;}
+function showSpin(msg){document.getElementById('spin-msg').textContent=msg;document.getElementById('spinner').classList.add('show');}
+function hideSpin(){document.getElementById('spinner').classList.remove('show');}
+function dlFile(name,type,content){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:type}));a.download=name;a.click();}
+var _timers={};
+function dbounce(fn,ms){return function(){clearTimeout(_timers[fn]);_timers[fn]=setTimeout(fn,ms);};}
+var _toast=null;
+function toast(msg,type){
+  if(_toast)_toast.remove();
+  _toast=document.createElement('div');
+  _toast.className='app-toast alert alert-'+(type||'success')+' mb-0';
+  _toast.textContent=msg;document.body.appendChild(_toast);
+  setTimeout(function(){if(_toast)_toast.remove();},3200);
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+(function(){
+  if(Store.getAll('categories').length===0){
+    [{name:'Fuel (Diesel)',unit:'Liters',icon:'⛽',color:'#e63946'},
+     {name:'Fuel (Petrol)',unit:'Liters',icon:'🛢',color:'#f77f00'},
+     {name:'Water',unit:'Liters',icon:'💧',color:'#0077b6'},
+     {name:'LPG',unit:'kg',icon:'🔥',color:'#f4a261'},
+     {name:'Sewage',unit:'m3',icon:'🚽',color:'#6d6875'},
+     {name:'Waste',unit:'kg',icon:'🗑',color:'#588157'},
+     {name:'Electricity',unit:'kWh',icon:'⚡',color:'#ffd60a'}
+    ].forEach(function(c){Store.add('categories',c);});
+  }
+  loadCats();popCatSel('f-cat');
+  document.getElementById('f-date').valueAsDate=new Date();
+  var name=getSetting('camp_name');
+  if(name){document.getElementById('brand-name').textContent=name;document.title=name+' Tracker';}
+  renderDashboard();
+})();
+
+// ── PWA: Service Worker + Install prompt ─────────────────────────
+var _deferredInstall = null;
+
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(e){ console.warn('SW:', e); });
+}
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstall = e;
+  // Show install button in topbar
+  var btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', function() {
+  _deferredInstall = null;
+  var btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = 'none';
+  toast('App installed! Open from your home screen.', 'success');
+});
+
+function installApp() {
+  if(!_deferredInstall) { toast('Open this page in Chrome/Edge to install', 'info'); return; }
+  _deferredInstall.prompt();
+  _deferredInstall.userChoice.then(function(r) {
+    if(r.outcome === 'accepted') toast('Installing...', 'success');
+    _deferredInstall = null;
+  });
+}
+</script>
+</body>
+</html>

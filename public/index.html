@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camp Utilities Tracker</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --sidebar-w: 220px;
+    --primary: #4361ee;
+    --primary-dark: #3451d1;
+    --surface: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--surface); color: var(--text); }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w);
+    background: #1e293b; color: #fff; z-index: 200; display: flex; flex-direction: column;
+    transition: transform .25s;
+  }
+  #sidebar .brand { padding: 20px 16px; font-size: 1rem; font-weight: 700; border-bottom: 1px solid #334155; }
+  #sidebar .brand span { font-size: 1.3rem; margin-right: 8px; }
+  #sidebar nav a {
+    display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+    color: #94a3b8; text-decoration: none; font-size: .9rem; border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  #sidebar nav a:hover, #sidebar nav a.active {
+    color: #fff; background: rgba(255,255,255,.05); border-left-color: var(--primary);
+  }
+  #sidebar nav a i { font-size: 1.1rem; width: 22px; }
+
+  /* ── Main content ── */
+  #main { margin-left: var(--sidebar-w); min-height: 100vh; }
+  .topbar {
+    background: var(--card-bg); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar h1 { margin: 0; font-size: 1.15rem; font-weight: 600; flex: 1; }
+  #page { padding: 24px; }
+
+  /* ── Cards ── */
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; }
+  .kpi-card { border-radius: 12px; padding: 18px 20px; color: #fff; position: relative; overflow: hidden; }
+  .kpi-card .kpi-icon { font-size: 2.2rem; opacity: .25; position: absolute; right: 16px; top: 12px; }
+  .kpi-card .kpi-val  { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .kpi-card .kpi-lbl  { font-size: .8rem; opacity: .85; margin-top: 4px; }
+
+  /* ── Gauge ── */
+  .gauge-wrap { position: relative; width: 140px; margin: 0 auto; }
+  .gauge-val {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    font-size: 1.15rem; font-weight: 700; color: var(--text);
+  }
+
+  /* ── Table ── */
+  .table th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 600; }
+  .table td { font-size: .9rem; vertical-align: middle; }
+  .img-thumb { width: 48px; height: 40px; object-fit: cover; border-radius: 6px; cursor: pointer; }
+  .badge-cat { font-size: .75rem; padding: 4px 10px; border-radius: 20px; color: #fff; }
+
+  /* ── Camera / Upload area ── */
+  #drop-zone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  #drop-zone:hover, #drop-zone.dragover { border-color: var(--primary); background: #eff3ff; }
+  #drop-zone i { font-size: 3rem; color: var(--text-muted); }
+  #preview-img { max-height: 260px; border-radius: 10px; object-fit: contain; display: none; }
+
+  /* ── Mobile bottom nav ── */
+  #bottom-nav {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1e293b; z-index: 300; border-top: 1px solid #334155;
+  }
+  #bottom-nav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 8px 4px; color: #94a3b8; text-decoration: none; font-size: .65rem; gap: 2px;
+  }
+  #bottom-nav a i { font-size: 1.3rem; }
+  #bottom-nav a.active { color: #7aa2f7; }
+
+  @media (max-width: 768px) {
+    #sidebar    { transform: translateX(-100%); }
+    #sidebar.open { transform: none; }
+    #main       { margin-left: 0; padding-bottom: 70px; }
+    #bottom-nav { display: flex; }
+    #page       { padding: 14px; }
+    .topbar     { padding: 12px 14px; }
+  }
+
+  /* ── Misc ── */
+  .section-title { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 10px; }
+  .spinner-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; gap: 14px; font-size: 1rem;
+  }
+  .spinner-overlay .spinner-border { width: 3rem; height: 3rem; }
+  #overlay { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div class="brand"><span>⛺</span> Camp Utilities</div>
+  <nav>
+    <a href="#dashboard" class="nav-link active" onclick="nav('dashboard',this)"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a href="#new"       class="nav-link"         onclick="nav('new',this)">      <i class="bi bi-plus-circle"></i> New Record</a>
+    <a href="#records"   class="nav-link"         onclick="nav('records',this)">  <i class="bi bi-table"></i> Records</a>
+    <a href="#categories" class="nav-link"        onclick="nav('categories',this)"><i class="bi bi-tags"></i> Categories</a>
+    <a href="#settings"  class="nav-link"         onclick="nav('settings',this)"> <i class="bi bi-gear"></i> Settings</a>
+  </nav>
+  <div class="mt-auto p-3" style="font-size:.75rem;color:#475569">
+    <div id="server-info-side">Loading…</div>
+  </div>
+</div>
+
+<!-- ── Mobile top bar ── -->
+<div id="main">
+  <div class="topbar">
+    <button class="btn btn-sm d-md-none me-2" onclick="toggleSidebar()"><i class="bi bi-list fs-5"></i></button>
+    <h1 id="page-title">Dashboard</h1>
+    <button class="btn btn-primary btn-sm d-none d-md-inline-flex align-items-center gap-1" onclick="nav('new',null)">
+      <i class="bi bi-plus-lg"></i> New Record
+    </button>
+  </div>
+
+  <div id="page">
+
+    <!-- ══════════════════════════════════════════
+         PAGE: DASHBOARD
+    ══════════════════════════════════════════ -->
+    <div id="pg-dashboard">
+      <div class="row g-3 mb-3" id="kpi-row"></div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-7">
+          <div class="card p-3 h-100">
+            <div class="section-title">30-Day Delivery Trend</div>
+            <canvas id="trend-chart" height="120"></canvas>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <div class="section-title">Category Breakdown</div>
+            <canvas id="donut-chart" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3" id="gauge-row"></div>
+
+      <div class="card p-3">
+        <div class="section-title">Recent Records</div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Date</th><th>Category</th><th>Qty</th><th>Supplier</th><th>Image</th></tr></thead>
+            <tbody id="recent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         PAGE: NEW RECORD
+    ══════════════════════════════════════════ -->
+    <div id="pg-new" style="display:none">
+      <div class="row g-3">
+        <!-- Upload col -->
+        <div class="col-md-5">
+          <div class="card p-3 h-100">
+            <div class="section-title mb-2">Capture / Upload Image</div>
+
+            <!-- Camera button (mobile prominent) -->
+            <div class="d-grid mb-2">
+              <label class="btn btn-outline-primary" for="camera-capture">
+                <i class="bi bi-camera"></i> Take Photo (Mobile)
+              </label>
+              <input type="file" id="camera-capture" accept="image/*" capture="environment" hidden onchange="onFileChosen(this.files[0])">
+            </div>
+
+            <div id="drop-zone" onclick="document.getElementById('file-pick').click()"
+                 ondragover="event.preventDefault();this.classList.add('dragover')"
+                 ondragleave="this.classList.remove('dragover')"
+                 ondrop="event.preventDefault();this.classList.remove('dragover');onFileChosen(event.dataTransfer.files[0])">
+              <i class="bi bi-cloud-upload"></i>
+              <p class="mb-0 mt-2 text-muted small">Click or drag &amp; drop an image here</p>
+              <input type="file" id="file-pick" accept="image/*" hidden onchange="onFileChosen(this.files[0])">
+            </div>
+
+            <img id="preview-img" class="mt-3 w-100" alt="Preview">
+
+            <div class="d-grid mt-3">
+              <button class="btn btn-success" id="extract-btn" onclick="extractData()" disabled>
+                <i class="bi bi-magic"></i> Extract Data with AI
+              </button>
+            </div>
+            <div id="extract-status" class="text-muted small mt-2 text-center"></div>
+          </div>
+        </div>
+
+        <!-- Form col -->
+        <div class="col-md-7">
+          <div class="card p-3">
+            <div class="section-title mb-2">Record Details</div>
+            <form id="record-form" onsubmit="submitRecord(event)">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                <select class="form-select" id="f-cat" required onchange="onCatChange()">
+                  <option value="">— Select —</option>
+                </select>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-7">
+                  <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                  <input type="number" step="any" class="form-control" id="f-qty" required placeholder="e.g. 1500">
+                </div>
+                <div class="col-5">
+                  <label class="form-label fw-semibold">Unit</label>
+                  <input type="text" class="form-control" id="f-unit" placeholder="Liters">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Delivery Date</label>
+                <input type="date" class="form-control" id="f-date">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Supplier / Vendor</label>
+                <input type="text" class="form-control" id="f-supplier" placeholder="Company name">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Vehicle / Truck #</label>
+                <input type="text" class="form-control" id="f-vehicle" placeholder="Plate number">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Notes</label>
+                <textarea class="form-control" id="f-notes" rows="2" placeholder="Any additional info…"></textarea>
+              </div>
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-lg"></i> Save Record
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">Clear</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         PAGE: RECORDS
+    ══════════════════════════════════════════ -->
+    <div id="pg-records" style="display:none">
+      <!-- Filters -->
+      <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-3">
+            <label class="form-label small">Category</label>
+            <select class="form-select form-select-sm" id="filter-cat" onchange="loadRecords()">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label small">From</label>
+            <input type="date" class="form-control form-control-sm" id="filter-from" onchange="loadRecords()">
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label small">To</label>
+            <input type="date" class="form-control form-control-sm" id="filter-to" onchange="loadRecords()">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small">Search</label>
+            <input type="text" class="form-control form-control-sm" id="filter-q" placeholder="Supplier, vehicle…" oninput="debounceLoad()">
+          </div>
+          <div class="col-sm-2">
+            <div class="dropdown">
+              <button class="btn btn-outline-success btn-sm w-100 dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-download"></i> Export
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" onclick="exportData('excel')"><i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" onclick="exportData('csv')"><i class="bi bi-filetype-csv me-2"></i>CSV</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>#</th><th>Date</th><th>Category</th><th>Qty</th><th>Unit</th>
+                <th>Supplier</th><th>Vehicle #</th><th>Notes</th><th>Image</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-tbody">
+              <tr><td colspan="10" class="text-center text-muted py-4">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex align-items-center gap-3 p-3 border-top">
+          <span class="text-muted small" id="records-count">—</span>
+          <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="btn-prev" onclick="changePage(-1)" disabled>‹ Prev</button>
+            <button class="btn btn-outline-secondary btn-sm" id="btn-next" onclick="changePage(1)"  disabled>Next ›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         PAGE: CATEGORIES
+    ══════════════════════════════════════════ -->
+    <div id="pg-categories" style="display:none">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="card p-3">
+            <div class="section-title mb-2">Add Category</div>
+            <form onsubmit="saveCategory(event)">
+              <div class="mb-2">
+                <label class="form-label small">Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="cat-name" required placeholder="e.g. Generator Fuel">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">Unit <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="cat-unit" required placeholder="e.g. Liters, kg, m³">
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label small">Icon (emoji)</label>
+                  <input type="text" class="form-control form-control-sm" id="cat-icon" value="📦" maxlength="4">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Color</label>
+                  <input type="color" class="form-control form-control-color form-control-sm w-100" id="cat-color" value="#4361ee">
+                </div>
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Category</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="card p-3">
+            <div class="section-title mb-2">Utility Categories</div>
+            <div id="cat-list" class="row g-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         PAGE: SETTINGS
+    ══════════════════════════════════════════ -->
+    <div id="pg-settings" style="display:none">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card p-3">
+            <div class="section-title mb-2">General Settings</div>
+            <div class="mb-3">
+              <label class="form-label">Camp / Site Name</label>
+              <input type="text" class="form-control" id="s-camp">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Anthropic API Key <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="s-apikey" placeholder="sk-ant-…">
+                <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKey()"><i class="bi bi-eye"></i></button>
+              </div>
+              <div class="form-text">Required for AI photo extraction. Get yours at console.anthropic.com</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Claude Model</label>
+              <select class="form-select" id="s-model">
+                <option value="claude-haiku-4-5-20251001">Claude Haiku (Fast &amp; cheap)</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet (Better accuracy)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()"><i class="bi bi-save"></i> Save Settings</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card p-3">
+            <div class="section-title mb-2">Server / Network Info</div>
+            <div id="server-info-detail" class="small text-muted">Loading…</div>
+            <hr>
+            <div class="section-title mt-2 mb-1">How to connect from mobile</div>
+            <ol class="small text-muted mb-0">
+              <li>Connect your phone to the <strong>same WiFi</strong> as this computer.</li>
+              <li>Open the Mobile URL shown above in your phone's browser.</li>
+              <li>Use the camera button to photograph receipts.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /#page -->
+</div><!-- /#main -->
+
+<!-- ── Mobile bottom nav ── -->
+<nav id="bottom-nav">
+  <a onclick="nav('dashboard',this)"><i class="bi bi-speedometer2"></i>Dashboard</a>
+  <a onclick="nav('new',this)"><i class="bi bi-plus-circle-fill"></i>New</a>
+  <a onclick="nav('records',this)"><i class="bi bi-table"></i>Records</a>
+  <a onclick="nav('categories',this)"><i class="bi bi-tags"></i>Categories</a>
+  <a onclick="nav('settings',this)"><i class="bi bi-gear"></i>Settings</a>
+</nav>
+
+<!-- ── Image lightbox ── -->
+<div class="modal fade" id="imgModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-header border-0 py-1">
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2 text-center">
+        <img id="modal-img" style="max-width:100%;max-height:80vh;border-radius:8px">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit record modal ── -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Record</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id">
+        <div class="mb-2">
+          <label class="form-label small">Category</label>
+          <select class="form-select form-select-sm" id="edit-cat"></select>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-7"><label class="form-label small">Quantity</label>
+            <input type="number" step="any" class="form-control form-control-sm" id="edit-qty"></div>
+          <div class="col-5"><label class="form-label small">Unit</label>
+            <input type="text" class="form-control form-control-sm" id="edit-unit"></div>
+        </div>
+        <div class="mb-2"><label class="form-label small">Delivery Date</label>
+          <input type="date" class="form-control form-control-sm" id="edit-date"></div>
+        <div class="mb-2"><label class="form-label small">Supplier</label>
+          <input type="text" class="form-control form-control-sm" id="edit-supplier"></div>
+        <div class="mb-2"><label class="form-label small">Vehicle #</label>
+          <input type="text" class="form-control form-control-sm" id="edit-vehicle"></div>
+        <div class="mb-2"><label class="form-label small">Notes</label>
+          <textarea class="form-control form-control-sm" id="edit-notes" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="updateRecord()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Spinner overlay ── -->
+<div id="overlay" class="spinner-overlay">
+  <div class="spinner-border text-light"></div>
+  <div id="overlay-msg">Processing…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let categories  = [];
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let chosenFile  = null;
+let uploadedFilename = null;
+let trendChart = null;
+let donutChart = null;
+let debounceTimer = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+const PAGES = { dashboard: 'Dashboard', new: 'New Record', records: 'Records', categories: 'Categories', settings: 'Settings' };
+
+function nav(page, el) {
+  Object.keys(PAGES).forEach(p => {
+    document.getElementById(`pg-${p}`).style.display = p === page ? '' : 'none';
+  });
+  document.getElementById('page-title').textContent = PAGES[page] || page;
+
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('#bottom-nav a').forEach(a => a.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  // sync both navs
+  const idx = Object.keys(PAGES).indexOf(page);
+  document.querySelectorAll('#bottom-nav a')[idx]?.classList.add('active');
+  document.querySelectorAll('#sidebar .nav-link')[idx]?.classList.add('active');
+
+  // close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+
+  if (page === 'dashboard')  loadDashboard();
+  if (page === 'records')    loadRecords();
+  if (page === 'categories') loadCategoriesPage();
+  if (page === 'settings')   loadSettings();
+  if (page === 'new')        populateCatSelect('f-cat');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CATEGORIES
+// ═══════════════════════════════════════════════════════════════════
+async function fetchCategories() {
+  const r = await fetch('/api/categories');
+  categories = await r.json();
+  return categories;
+}
+
+function populateCatSelect(elId) {
+  const sel = document.getElementById(elId);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select —</option>';
+  categories.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = `${c.icon} ${c.name}`; o.dataset.unit = c.unit;
+    if (c.id == cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function onCatChange() {
+  const sel = document.getElementById('f-cat');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt?.dataset.unit) document.getElementById('f-unit').value = opt.dataset.unit;
+}
+
+async function loadCategoriesPage() {
+  await fetchCategories();
+  const el = document.getElementById('cat-list');
+  el.innerHTML = categories.map(c => `
+    <div class="col-sm-6">
+      <div class="d-flex align-items-center gap-2 p-2 border rounded">
+        <span class="fs-4">${c.icon}</span>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">${c.name}</div>
+          <div class="text-muted" style="font-size:.75rem">${c.unit}</div>
+        </div>
+        <div class="w-8 h-8 rounded-circle" style="width:18px;height:18px;background:${c.color};border-radius:50%;flex-shrink:0"></div>
+        <button class="btn btn-link btn-sm text-danger p-0 ms-1" onclick="deleteCategory(${c.id})">
+          <i class="bi bi-trash3"></i>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+async function saveCategory(e) {
+  e.preventDefault();
+  const body = {
+    name:  document.getElementById('cat-name').value.trim(),
+    unit:  document.getElementById('cat-unit').value.trim(),
+    icon:  document.getElementById('cat-icon').value.trim() || '📦',
+    color: document.getElementById('cat-color').value
+  };
+  const r = await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.ok) {
+    e.target.reset();
+    document.getElementById('cat-icon').value = '📦';
+    loadCategoriesPage();
+    toast('Category added ✓');
+  } else toast((await r.json()).error || 'Error', 'danger');
+}
+
+async function deleteCategory(id) {
+  if (!confirm('Delete this category?')) return;
+  await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+  loadCategoriesPage();
+  toast('Deleted');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  const data = await (await fetch('/api/dashboard')).json();
+
+  // KPI cards
+  const kpiEl = document.getElementById('kpi-row');
+  const totalQty = data.byCategory.reduce((s, c) => s + (c.total_qty || 0), 0);
+  kpiEl.innerHTML = `
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="background:linear-gradient(135deg,#4361ee,#7b9ef9)">
+        <div class="kpi-icon"><i class="bi bi-archive"></i></div>
+        <div class="kpi-val">${data.totalRecords}</div>
+        <div class="kpi-lbl">Total Records</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="background:linear-gradient(135deg,#0077b6,#48cae4)">
+        <div class="kpi-icon"><i class="bi bi-calendar3"></i></div>
+        <div class="kpi-val">${data.thisMonth}</div>
+        <div class="kpi-lbl">This Month</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="background:linear-gradient(135deg,#f77f00,#f4a261)">
+        <div class="kpi-icon"><i class="bi bi-tags"></i></div>
+        <div class="kpi-val">${data.byCategory.length}</div>
+        <div class="kpi-lbl">Categories</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card" style="background:linear-gradient(135deg,#588157,#a7c957)">
+        <div class="kpi-icon"><i class="bi bi-droplet-half"></i></div>
+        <div class="kpi-val">${fmtNum(totalQty)}</div>
+        <div class="kpi-lbl">Total Units Delivered</div>
+      </div>
+    </div>`;
+
+  // Trend line chart
+  const trendCtx = document.getElementById('trend-chart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+  const days = [...new Set(data.trend.map(t => t.day))].sort();
+  const catNames = [...new Set(data.trend.map(t => t.category_name))];
+  const COLORS = ['#4361ee','#e63946','#0077b6','#f77f00','#588157','#6d6875','#ffd60a'];
+  const datasets = catNames.map((cat, i) => ({
+    label: cat,
+    data: days.map(d => { const row = data.trend.find(t => t.day === d && t.category_name === cat); return row ? row.qty : null; }),
+    borderColor: COLORS[i % COLORS.length],
+    backgroundColor: COLORS[i % COLORS.length] + '30',
+    tension: .35, fill: true, spanGaps: true, pointRadius: 3
+  }));
+  trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: { labels: days.map(d => d?.slice(5) || ''), datasets },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true } } }
+  });
+
+  // Donut chart
+  const donutCtx = document.getElementById('donut-chart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  const active = data.byCategory.filter(c => c.total_qty > 0);
+  donutChart = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: {
+      labels: active.map(c => c.name),
+      datasets: [{ data: active.map(c => c.total_qty), backgroundColor: active.map(c => c.color || '#4361ee'), borderWidth: 2 }]
+    },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+  });
+
+  // Gauge cards (top 4 categories by count)
+  const gaugeEl = document.getElementById('gauge-row');
+  const top4 = data.byCategory.slice(0, 4);
+  const maxCount = Math.max(...top4.map(c => c.count || 0), 1);
+  gaugeEl.innerHTML = top4.map(c => {
+    const pct = Math.round(((c.count || 0) / maxCount) * 100);
+    return `
+    <div class="col-6 col-md-3">
+      <div class="card p-3 text-center">
+        <div class="section-title">${c.icon} ${c.name}</div>
+        <div class="gauge-wrap">
+          <canvas class="gauge-canvas" data-pct="${pct}" data-color="${c.color || '#4361ee'}" height="90"></canvas>
+          <div class="gauge-val">${pct}%</div>
+        </div>
+        <div class="mt-2 small text-muted">${fmtNum(c.total_qty || 0)} ${c.unit} · ${c.count} records</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Draw gauges
+  document.querySelectorAll('.gauge-canvas').forEach(canvas => {
+    const pct   = Number(canvas.dataset.pct);
+    const color = canvas.dataset.color;
+    new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [pct, 100 - pct],
+          backgroundColor: [color, '#e2e8f0'],
+          borderWidth: 0, circumference: 180, rotation: 270
+        }]
+      },
+      options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '72%' }
+    });
+  });
+
+  // Recent table
+  const tbody = document.getElementById('recent-tbody');
+  tbody.innerHTML = data.recent.length ? data.recent.map(r => `
+    <tr>
+      <td>${r.delivery_date || '—'}</td>
+      <td><span class="badge-cat" style="background:${r.color||'#888'}">${r.icon||''} ${r.category_name||'—'}</span></td>
+      <td>${fmtNum(r.quantity)} ${r.unit||''}</td>
+      <td>${r.supplier||'—'}</td>
+      <td>${r.image_filename ? `<img src="/uploads/${r.image_filename}" class="img-thumb" onclick="showImg('/uploads/${r.image_filename}')">` : '—'}</td>
+    </tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted py-3">No records yet</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  NEW RECORD
+// ═══════════════════════════════════════════════════════════════════
+function onFileChosen(file) {
+  if (!file) return;
+  chosenFile = file;
+  uploadedFilename = null;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result; img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('extract-btn').disabled = false;
+  document.getElementById('extract-status').textContent = 'Image ready. Click "Extract Data with AI" to auto-fill.';
+}
+
+async function extractData() {
+  if (!chosenFile) return;
+  showOverlay('Sending to AI for extraction…');
+  const fd = new FormData();
+  fd.append('image', chosenFile);
+  try {
+    const r   = await fetch('/api/extract', { method: 'POST', body: fd });
+    const data = await r.json();
+    hideOverlay();
+    if (data.error && !data.image_filename) {
+      return toast(data.error, 'danger');
+    }
+    if (data.image_filename) uploadedFilename = data.image_filename;
+    if (data.error) toast('AI extraction failed: ' + data.error, 'warning');
+
+    // Populate form
+    await fetchCategories();
+    populateCatSelect('f-cat');
+    if (data.category) {
+      const match = categories.find(c => c.name.toLowerCase().includes((data.category || '').toLowerCase()));
+      if (match) {
+        document.getElementById('f-cat').value = match.id;
+        document.getElementById('f-unit').value = match.unit;
+      }
+    }
+    if (data.quantity)       document.getElementById('f-qty').value      = data.quantity;
+    if (data.unit)           document.getElementById('f-unit').value     = data.unit;
+    if (data.supplier)       document.getElementById('f-supplier').value = data.supplier;
+    if (data.vehicle_number) document.getElementById('f-vehicle').value  = data.vehicle_number;
+    if (data.delivery_date)  document.getElementById('f-date').value     = data.delivery_date;
+    if (data.notes)          document.getElementById('f-notes').value    = data.notes;
+    document.getElementById('extract-status').textContent = '✅ Data extracted — please review and save.';
+    toast('AI extraction complete! Review the fields below.');
+  } catch(err) {
+    hideOverlay();
+    toast('Network error: ' + err.message, 'danger');
+  }
+}
+
+async function submitRecord(e) {
+  e.preventDefault();
+  const catSel = document.getElementById('f-cat');
+  const catOpt = catSel.options[catSel.selectedIndex];
+
+  const fd = new FormData();
+  fd.append('category_id',   catSel.value);
+  fd.append('category_name', catOpt?.text?.replace(/^.\s/, '') || '');
+  fd.append('quantity',      document.getElementById('f-qty').value);
+  fd.append('unit',          document.getElementById('f-unit').value);
+  fd.append('delivery_date', document.getElementById('f-date').value);
+  fd.append('supplier',      document.getElementById('f-supplier').value);
+  fd.append('vehicle_number',document.getElementById('f-vehicle').value);
+  fd.append('notes',         document.getElementById('f-notes').value);
+
+  // if image was already uploaded via extract, don't re-upload; pass filename
+  if (uploadedFilename) {
+    fd.append('existing_image', uploadedFilename);
+    // server checks for existing_image when image not attached
+  } else if (chosenFile) {
+    fd.append('image', chosenFile);
+  }
+
+  showOverlay('Saving record…');
+  const r = await fetch('/api/records', { method: 'POST', body: fd });
+  hideOverlay();
+  if (r.ok) {
+    toast('Record saved ✓', 'success');
+    resetForm();
+    nav('records', null);
+  } else {
+    toast((await r.json()).error || 'Error saving', 'danger');
+  }
+}
+
+function resetForm() {
+  document.getElementById('record-form').reset();
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('extract-btn').disabled = true;
+  document.getElementById('extract-status').textContent = '';
+  chosenFile = null; uploadedFilename = null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RECORDS TABLE
+// ═══════════════════════════════════════════════════════════════════
+async function loadRecords() {
+  currentPage = 0;
+  await renderRecords();
+}
+
+async function renderRecords() {
+  const cat  = document.getElementById('filter-cat')?.value || '';
+  const from = document.getElementById('filter-from')?.value || '';
+  const to   = document.getElementById('filter-to')?.value || '';
+  const q    = document.getElementById('filter-q')?.value || '';
+  const params = new URLSearchParams({ limit: PAGE_SIZE, offset: currentPage * PAGE_SIZE });
+  if (cat)  params.set('category_id', cat);
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+  if (q)    params.set('q', q);
+
+  const data = await (await fetch('/api/records?' + params)).json();
+  const tbody = document.getElementById('records-tbody');
+
+  tbody.innerHTML = data.rows.length ? data.rows.map(r => `
+    <tr>
+      <td class="text-muted small">${r.id}</td>
+      <td>${r.delivery_date || '—'}</td>
+      <td><span class="badge-cat" style="background:${r.color||'#888'}">${r.icon||''} ${r.category_name||'—'}</span></td>
+      <td class="fw-semibold">${fmtNum(r.quantity)}</td>
+      <td class="text-muted small">${r.unit||'—'}</td>
+      <td>${r.supplier||'—'}</td>
+      <td>${r.vehicle_number||'—'}</td>
+      <td class="text-muted small" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.notes||'—'}</td>
+      <td>${r.image_filename ? `<img src="/uploads/${r.image_filename}" class="img-thumb" onclick="showImg('/uploads/${r.image_filename}')">` : '—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" onclick="openEdit(${r.id})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger py-0 px-1"  onclick="deleteRecord(${r.id})"><i class="bi bi-trash3"></i></button>
+      </td>
+    </tr>`).join('')
+    : '<tr><td colspan="10" class="text-center text-muted py-4">No records found</td></tr>';
+
+  const total = data.total;
+  document.getElementById('records-count').textContent = `Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, total)} of ${total}`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = (currentPage + 1) * PAGE_SIZE >= total;
+
+  // also populate filter cat
+  await fetchCategories();
+  const sel = document.getElementById('filter-cat');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Categories</option>';
+  categories.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = `${c.icon} ${c.name}`;
+    if (c.id == cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderRecords();
+}
+
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(loadRecords, 400);
+}
+
+function exportData(format) {
+  const cat  = document.getElementById('filter-cat')?.value || '';
+  const from = document.getElementById('filter-from')?.value || '';
+  const to   = document.getElementById('filter-to')?.value || '';
+  const params = new URLSearchParams();
+  if (cat)  params.set('category_id', cat);
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+  window.location = `/api/export/${format}?${params}`;
+}
+
+// ─ Edit record ────────────────────────────────────────────────────
+async function openEdit(id) {
+  const r = await (await fetch(`/api/records/${id}`)).json();
+  document.getElementById('edit-id').value       = r.id;
+  document.getElementById('edit-qty').value      = r.quantity;
+  document.getElementById('edit-unit').value     = r.unit || '';
+  document.getElementById('edit-date').value     = r.delivery_date || '';
+  document.getElementById('edit-supplier').value = r.supplier || '';
+  document.getElementById('edit-vehicle').value  = r.vehicle_number || '';
+  document.getElementById('edit-notes').value    = r.notes || '';
+  await fetchCategories();
+  populateCatSelect('edit-cat');
+  document.getElementById('edit-cat').value = r.category_id || '';
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+async function updateRecord() {
+  const id = document.getElementById('edit-id').value;
+  const catSel = document.getElementById('edit-cat');
+  const catOpt = catSel.options[catSel.selectedIndex];
+  const body = {
+    category_id:   catSel.value,
+    category_name: catOpt?.text?.replace(/^.\s/, '') || '',
+    quantity:      document.getElementById('edit-qty').value,
+    unit:          document.getElementById('edit-unit').value,
+    delivery_date: document.getElementById('edit-date').value,
+    supplier:      document.getElementById('edit-supplier').value,
+    vehicle_number:document.getElementById('edit-vehicle').value,
+    notes:         document.getElementById('edit-notes').value,
+  };
+  await fetch(`/api/records/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  bootstrap.Modal.getInstance(document.getElementById('editModal'))?.hide();
+  toast('Record updated ✓');
+  renderRecords();
+}
+
+async function deleteRecord(id) {
+  if (!confirm('Delete this record?')) return;
+  await fetch(`/api/records/${id}`, { method: 'DELETE' });
+  toast('Record deleted');
+  renderRecords();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════════════
+async function loadSettings() {
+  const s = await (await fetch('/api/settings')).json();
+  document.getElementById('s-camp').value   = s.camp_name || '';
+  document.getElementById('s-apikey').value = s.anthropic_api_key || '';
+  document.getElementById('s-model').value  = s.claude_model || 'claude-haiku-4-5-20251001';
+
+  const info = `
+    <p><strong>Desktop URL:</strong><br>
+    <a href="http://localhost:${s.server_port}" target="_blank">http://localhost:${s.server_port}</a></p>
+    <p><strong>Mobile URL (WiFi):</strong><br>
+    <a href="http://${s.server_ip}:${s.server_port}" target="_blank" class="text-primary fw-bold fs-6">
+      http://${s.server_ip}:${s.server_port}
+    </a></p>
+    <p class="mt-2 text-success"><i class="bi bi-wifi"></i> Share the Mobile URL with camp devices on the same WiFi.</p>`;
+  document.getElementById('server-info-detail').innerHTML = info;
+  document.getElementById('server-info-side').innerHTML =
+    `📶 Mobile: <strong>http://${s.server_ip}:${s.server_port}</strong>`;
+}
+
+async function saveSettings() {
+  const body = {
+    camp_name:         document.getElementById('s-camp').value,
+    anthropic_api_key: document.getElementById('s-apikey').value,
+    claude_model:      document.getElementById('s-model').value,
+  };
+  const r = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.ok) toast('Settings saved ✓');
+  else      toast('Error saving settings', 'danger');
+}
+
+function toggleApiKey() {
+  const el = document.getElementById('s-apikey');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function fmtNum(n) {
+  if (n == null || n === '') return '—';
+  return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function showImg(src) {
+  document.getElementById('modal-img').src = src;
+  new bootstrap.Modal(document.getElementById('imgModal')).show();
+}
+
+function showOverlay(msg) {
+  document.getElementById('overlay-msg').textContent = msg;
+  document.getElementById('overlay').style.display = 'flex';
+}
+function hideOverlay() { document.getElementById('overlay').style.display = 'none'; }
+
+let toastEl = null;
+function toast(msg, type = 'success') {
+  if (toastEl) toastEl.remove();
+  toastEl = document.createElement('div');
+  toastEl.className = `alert alert-${type} position-fixed shadow`;
+  toastEl.style.cssText = 'bottom:80px;right:16px;z-index:9999;min-width:240px;max-width:90vw';
+  toastEl.textContent = msg;
+  document.body.appendChild(toastEl);
+  setTimeout(() => toastEl?.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+(async function init() {
+  await fetchCategories();
+  populateCatSelect('f-cat');
+  loadDashboard();
+  loadSettings();
+  // set today as default date
+  document.getElementById('f-date').valueAsDate = new Date();
+})();
+</script>
+</body>
+</html>
