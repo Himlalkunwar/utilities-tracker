@@ -1,17 +1,22 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v3';
+const CACHE = 'camp-utils-v7';
 
 const SHELL = [
-  './CampUtilities.html',
+  './camputilities.html',
   './manifest.json',
-  './icon.svg',
+  './logo.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'
 ];
 
 // Install: cache everything
@@ -44,6 +49,8 @@ self.addEventListener('fetch', function(e) {
   // Skip non-GET and Anthropic API calls (need live network)
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('api.anthropic.com')) return;
+  // Auth/extract API calls must always hit the live network, never the cache.
+  if (e.request.url.includes('/api/')) return;
 
   e.respondWith(
     caches.match(e.request).then(function(cached) {
@@ -63,7 +70,7 @@ self.addEventListener('fetch', function(e) {
         return response;
       }).catch(function() {
         // Offline fallback: return cached app
-        return caches.match('./CampUtilities.html');
+        return caches.match('./camputilities.html');
       });
     })
   );

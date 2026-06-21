@@ -1,0 +1,16 @@
+# Camp Utilities Tracker — static PWA
+# The app is a self-contained browser app; no build step is required.
+[build]
+  publish = "."
+  command = ""
+
+# Service worker and manifest must be served fresh so updates roll out.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "no-cache"
