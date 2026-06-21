@@ -70,9 +70,38 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
 .app-toast{position:fixed;bottom:76px;right:16px;z-index:8888;padding:10px 18px;border-radius:8px;font-size:.875rem;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fadeUp .25s ease;max-width:90vw}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .sbar{font-size:.78rem;min-height:18px}
+/* Auth gate */
+#auth-screen{position:fixed;inset:0;z-index:5000;background:linear-gradient(160deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;padding:20px}
+#auth-screen.hide{display:none}
+.auth-card{background:#fff;border-radius:16px;padding:30px 26px;width:100%;max-width:370px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.auth-brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:1.18rem}
+.auth-brand img{width:40px;height:40px;border-radius:10px;display:block}
+.auth-sub{color:var(--mut);font-size:.85rem;margin:6px 0 18px}
+.auth-error{background:#fde8e8;color:#b42318;font-size:.82rem;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+.auth-hint{margin-top:14px;font-size:.78rem;color:var(--mut);text-align:center}
+.acct{display:flex;align-items:center;gap:8px}
+.acct .role-badge{font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:20px;background:#1e293b;color:#cbd5e1}
+.acct .role-badge.admin{background:#4361ee;color:#fff}
 </style>
 </head>
 <body>
+<!-- Login gate -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand"><img src="logo.png" alt="logo"><span>Camp Utilities</span></div>
+    <div id="auth-sub" class="auth-sub">Sign in to continue</div>
+    <div id="auth-error" class="auth-error" style="display:none"></div>
+    <form id="auth-form" onsubmit="return doAuth(event)">
+      <input id="auth-user" class="form-control mb-2" placeholder="Username" autocomplete="username" autocapitalize="none" required>
+      <div class="input-group mb-2">
+        <input id="auth-pass" type="password" class="form-control" placeholder="Password" autocomplete="current-password" required>
+        <button class="btn btn-outline-secondary" type="button" onclick="var p=document.getElementById('auth-pass');p.type=p.type==='password'?'text':'password'"><i class="bi bi-eye"></i></button>
+      </div>
+      <button class="btn btn-primary w-100" id="auth-btn" type="submit">Sign In</button>
+    </form>
+    <div id="auth-hint" class="auth-hint"></div>
+  </div>
+</div>
 <div id="ovbg" onclick="closeSB()"></div>
 <div id="sidebar">
   <div class="brand"><span class="logo"><img src="logo.png" alt="Camp Utilities logo"></span><span id="brand-name">Camp Utilities</span></div>
@@ -83,7 +112,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
     <a class="nl" data-page="categories"><i class="bi bi-tags"></i>Categories</a>
     <a class="nl" data-page="settings"><i class="bi bi-gear"></i>Settings</a>
   </nav>
-  <div class="sfooter">Tap Settings to set API key</div>
+  <div class="sfooter" id="acct-footer"></div>
 </div>
 <div id="main">
   <div class="topbar">
@@ -244,19 +273,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
           <div class="ct">General Settings</div>
           <div class="mb-3"><label class="form-label">Camp / Site Name</label>
             <input type="text" class="form-control" id="s-camp" placeholder="e.g. Base Camp Alpha"></div>
-          <div class="mb-3">
-            <label class="form-label">Anthropic API Key <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="password" class="form-control" id="s-key" placeholder="sk-ant-...">
-              <button class="btn btn-outline-secondary" type="button" onclick="toggleKey()"><i class="bi bi-eye"></i></button>
+          <div id="admin-config" style="display:none">
+            <div class="mb-3">
+              <label class="form-label">Anthropic API Key <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="s-key" placeholder="sk-ant-...">
+                <button class="btn btn-outline-secondary" type="button" onclick="toggleKey()"><i class="bi bi-eye"></i></button>
+              </div>
+              <div class="form-text">Shared by everyone who uses this app. Stored securely on the server — never shown to non-admin users. Leave blank to keep the saved key. Get one from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
             </div>
-            <div class="form-text">Required for AI photo extraction. Get from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+            <div class="mb-3"><label class="form-label">Claude Model</label>
+              <select class="form-select" id="s-model">
+                <option value="claude-haiku-4-5-20251001">Claude Haiku (Fast, low cost)</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet (Better accuracy)</option>
+              </select>
+            </div>
           </div>
-          <div class="mb-3"><label class="form-label">Claude Model</label>
-            <select class="form-select" id="s-model">
-              <option value="claude-haiku-4-5-20251001">Claude Haiku (Fast, low cost)</option>
-              <option value="claude-sonnet-4-6">Claude Sonnet (Better accuracy)</option>
-            </select>
+          <div id="user-config-note" class="alert alert-secondary py-2 px-3 mb-3" style="display:none;font-size:.82rem">
+            <i class="bi bi-shield-lock me-1"></i>The AI API key is managed by an administrator and cannot be changed here.
           </div>
           <button class="btn btn-primary" onclick="saveSettings()"><i class="bi bi-save me-1"></i>Save Settings</button>
         </div></div>
@@ -264,7 +298,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
           <div class="card p-3 mb-3">
             <div class="ct">How to Use</div>
             <ol class="small text-muted ps-3 mb-0" style="line-height:1.9">
-              <li>Enter your <strong>Anthropic API key</strong> above and save.</li>
+              <li>An administrator sets the <strong>Anthropic API key</strong> once for everyone.</li>
               <li>Go to <strong>New Record</strong>, tap camera or drag a photo.</li>
               <li>Click <strong>Extract Data with AI</strong> — fields fill automatically.</li>
               <li>Review then <strong>Save Record</strong>.</li>
@@ -281,6 +315,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
               <input type="file" id="restore-input" accept=".json" hidden onchange="restoreBackup(this)">
             </div>
             <button class="btn btn-outline-danger btn-sm w-100" onclick="clearAll()"><i class="bi bi-trash3 me-1"></i>Clear All Data (Reset)</button>
+          </div>
+          <div id="users-card" class="card p-3 mt-3" style="display:none">
+            <div class="ct">User Accounts</div>
+            <div id="user-list" class="mb-3"></div>
+            <form onsubmit="return addUser(event)" class="border-top pt-3">
+              <div class="row g-2">
+                <div class="col-12"><input class="form-control form-control-sm" id="nu-name" placeholder="New username" autocapitalize="none" required></div>
+                <div class="col-7"><input type="password" class="form-control form-control-sm" id="nu-pass" placeholder="Password (6+ chars)" required></div>
+                <div class="col-5"><select class="form-select form-select-sm" id="nu-role"><option value="user">User</option><option value="admin">Admin</option></select></div>
+              </div>
+              <button class="btn btn-primary btn-sm w-100 mt-2" type="submit"><i class="bi bi-person-plus me-1"></i>Add User</button>
+              <div class="form-text">Users can record deliveries and run AI extraction but cannot view or change the API key. Admins can do everything.</div>
+            </form>
           </div>
         </div>
       </div>
@@ -371,6 +418,70 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 'use strict';
+// ══════════════════════════════════════════════════════════════════
+// AUTH — login gate, roles, server-managed AI config
+// ══════════════════════════════════════════════════════════════════
+var AUTH={token:localStorage.getItem('cu_token')||'',role:localStorage.getItem('cu_role')||'',user:localStorage.getItem('cu_user')||''};
+var CONFIG={model:'claude-haiku-4-5-20251001',hasKey:false};
+var AUTH_SETUP=false;
+function authHeaders(){return AUTH.token?{'Authorization':'Bearer '+AUTH.token}:{};}
+function setSession(token,role,user){
+  AUTH.token=token;AUTH.role=role;AUTH.user=user;
+  localStorage.setItem('cu_token',token);localStorage.setItem('cu_role',role);localStorage.setItem('cu_user',user);
+}
+function clearSession(){AUTH.token=AUTH.role=AUTH.user='';localStorage.removeItem('cu_token');localStorage.removeItem('cu_role');localStorage.removeItem('cu_user');}
+function authPost(body){
+  return fetch('/api/auth',{method:'POST',headers:Object.assign({'content-type':'application/json'},authHeaders()),body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return{};}).then(function(d){if(!r.ok)throw new Error(d.error||('Request failed ('+r.status+')'));return d;});});
+}
+function authError(msg){var el=document.getElementById('auth-error');if(!msg){el.style.display='none';return;}el.textContent=msg;el.style.display='';}
+function showAuthScreen(){
+  document.getElementById('auth-screen').classList.remove('hide');
+  document.getElementById('auth-sub').textContent=AUTH_SETUP?'Create the administrator account to get started':'Sign in to continue';
+  document.getElementById('auth-btn').textContent=AUTH_SETUP?'Create Admin Account':'Sign In';
+  document.getElementById('auth-pass').setAttribute('autocomplete',AUTH_SETUP?'new-password':'current-password');
+  document.getElementById('auth-hint').innerHTML=AUTH_SETUP?'This first account becomes the administrator and sets the shared AI API key.':'';
+  authError('');
+}
+function doAuth(e){
+  e.preventDefault();
+  var u=document.getElementById('auth-user').value.trim();
+  var p=document.getElementById('auth-pass').value;
+  var btn=document.getElementById('auth-btn');btn.disabled=true;authError('');
+  authPost({action:AUTH_SETUP?'register':'login',username:u,password:p}).then(function(d){
+    setSession(d.token,d.role,d.username||u);
+    CONFIG.model=d.model||CONFIG.model;CONFIG.hasKey=!!d.hasKey;
+    enterApp();
+  }).catch(function(err){authError(err.message);}).finally(function(){btn.disabled=false;});
+}
+function enterApp(){
+  document.getElementById('auth-screen').classList.add('hide');
+  document.getElementById('auth-pass').value='';
+  applyRole();
+}
+function logout(){clearSession();location.reload();}
+function applyRole(){
+  var admin=AUTH.role==='admin';
+  var ac=document.getElementById('admin-config');if(ac)ac.style.display=admin?'':'none';
+  var un=document.getElementById('user-config-note');if(un)un.style.display=admin?'none':'';
+  var uc=document.getElementById('users-card');if(uc)uc.style.display=admin?'':'none';
+  var ft=document.getElementById('acct-footer');
+  if(ft)ft.innerHTML='<div class="acct"><i class="bi bi-person-circle"></i><span class="flex-grow-1 text-truncate">'+(AUTH.user||'')+'</span>'
+    +'<span class="role-badge'+(admin?' admin':'')+'">'+(admin?'Admin':'User')+'</span></div>'
+    +'<button class="btn btn-sm btn-outline-light w-100 mt-2" style="font-size:.74rem" onclick="logout()"><i class="bi bi-box-arrow-right me-1"></i>Sign Out</button>';
+}
+function authBoot(){
+  fetch('/api/auth',{headers:authHeaders()}).then(function(r){return r.json();}).then(function(s){
+    CONFIG.model=s.model||CONFIG.model;CONFIG.hasKey=!!s.hasKey;
+    if(s.authenticated){setSession(AUTH.token,s.role,s.username);enterApp();return;}
+    AUTH_SETUP=!!s.setup;showAuthScreen();
+  }).catch(function(){
+    // Offline: if a session token exists, allow local use; otherwise require connection.
+    if(AUTH.token){enterApp();}
+    else{showAuthScreen();authError('Cannot reach the server. Connect to the internet to sign in.');}
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // STORAGE — localStorage only (works everywhere, always persists)
 // Photos go to IndexedDB (too large for localStorage)
@@ -501,26 +612,17 @@ dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('d
 // ── AI Extraction ─────────────────────────────────────────────────
 function runExtract(){
   if(!chosenImage)return;
-  var apiKey=getSetting('api_key');
-  if(!apiKey){toast('Set your Anthropic API key in Settings first.','warning');goPage('settings');return;}
-  var model=getSetting('model','claude-haiku-4-5-20251001');
   showSpin('Sending to AI...');
   var base64=chosenImage.dataUrl.split(',')[1];
-  var prompt='Analyze this camp utility delivery image. Return ONLY valid JSON: {"quantity":number_or_null,"unit":"liters|kg|m3|kWh|null","category":"Fuel (Diesel)|Fuel (Petrol)|Water|LPG|Sewage|Waste|Electricity|Other","supplier":"name_or_null","vehicle_number":"plate_or_null","delivery_date":"YYYY-MM-DD_or_null","notes":"other_info_or_null"}';
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch('/api/extract',{
     method:'POST',
-    headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:model,max_tokens:512,messages:[{role:'user',content:[
-      {type:'image',source:{type:'base64',media_type:chosenImage.mimeType,data:base64}},
-      {type:'text',text:prompt}
-    ]}]})
-  }).then(function(r){return r.json();}).then(function(data){
+    headers:Object.assign({'content-type':'application/json'},authHeaders()),
+    body:JSON.stringify({dataBase64:base64,mimeType:chosenImage.mimeType})
+  }).then(function(r){return r.json().catch(function(){return{};}).then(function(d){return{ok:r.ok,d:d};});})
+  .then(function(res){
     hideSpin();
-    if(data.error){setSbar('AI error: '+data.error.message);toast('AI error: '+data.error.message,'danger');return;}
-    var text=data.content[0].text.trim();
-    var match=text.match(/\{[\s\S]*\}/);
-    if(!match){setSbar('Could not parse AI response');return;}
-    fillExtract(JSON.parse(match[0]));
+    if(!res.ok||res.d.error){var m=res.d.error||'AI request failed';setSbar('AI error: '+m);toast('AI error: '+m,'danger');return;}
+    fillExtract(res.d.fields);
     setSbar('AI extraction complete - review and save.');
     toast('Fields filled! Review then save.');
   }).catch(function(err){hideSpin();setSbar('Error: '+err.message);toast('Error: '+err.message,'danger');});
@@ -785,11 +887,10 @@ function checkStorage(){
     var v=localStorage.getItem('cu_test');
     localStorage.removeItem('cu_test');
     if(v==='ok'){
-      var apiSaved=getSetting('api_key');
+      var keyTxt=CONFIG.hasKey?' &nbsp;&bull;&nbsp; AI API key: configured':' &nbsp;&bull;&nbsp; AI API key: <em>not set yet</em>';
       el.className='alert alert-success py-2 px-3 mb-2';
       el.style.fontSize='.8rem';
-      el.innerHTML='<i class="bi bi-check-circle-fill me-1"></i><strong>Storage: Working</strong>'
-        +(apiSaved?' &nbsp;&bull;&nbsp; API key saved ('+apiSaved.length+' chars)':' &nbsp;&bull;&nbsp; API key: <em>not saved yet</em>');
+      el.innerHTML='<i class="bi bi-check-circle-fill me-1"></i><strong>Storage: Working</strong>'+keyTxt;
     }else{
       el.className='alert alert-danger py-2 px-3 mb-2';
       el.innerHTML='<i class="bi bi-x-circle-fill me-1"></i><strong>Storage: Read failed</strong> — data cannot be saved in this browser';
@@ -801,21 +902,60 @@ function checkStorage(){
   }
 }
 function loadSettings(){
+  applyRole();
   document.getElementById('s-camp').value=getSetting('camp_name');
-  document.getElementById('s-key').value=getSetting('api_key');
-  document.getElementById('s-model').value=getSetting('model','claude-haiku-4-5-20251001');
+  if(AUTH.role==='admin'){
+    document.getElementById('s-key').value='';
+    document.getElementById('s-key').placeholder=CONFIG.hasKey?'•••••••• (saved — leave blank to keep)':'sk-ant-...';
+    document.getElementById('s-model').value=CONFIG.model||'claude-haiku-4-5-20251001';
+    loadUsers();
+  }
   var recs=Store.getAll('records');
   document.getElementById('db-size').textContent=recs.length+' records, '+Store.getAll('categories').length+' categories, '+recs.filter(function(r){return r.hasImage;}).length+' with photos';
   checkStorage();
 }
 function saveSettings(){
-  setSetting('camp_name',document.getElementById('s-camp').value.trim());
-  setSetting('api_key',document.getElementById('s-key').value.trim());
-  setSetting('model',document.getElementById('s-model').value);
-  var name=document.getElementById('s-camp').value.trim()||'Camp Utilities';
-  document.getElementById('brand-name').textContent=name;document.title=name+' Tracker';
-  checkStorage();
-  toast('Settings saved! ✔ API key stored ('+getSetting('api_key').length+' chars)','success');
+  var name=document.getElementById('s-camp').value.trim();
+  setSetting('camp_name',name);
+  document.getElementById('brand-name').textContent=name||'Camp Utilities';document.title=(name||'Camp Utilities')+' Tracker';
+  if(AUTH.role!=='admin'){toast('Settings saved!','success');checkStorage();return;}
+  var payload={action:'saveConfig',model:document.getElementById('s-model').value};
+  var key=document.getElementById('s-key').value.trim();
+  if(key)payload.api_key=key;
+  authPost(payload).then(function(d){
+    CONFIG.model=d.model||CONFIG.model;CONFIG.hasKey=!!d.hasKey;
+    document.getElementById('s-key').value='';
+    document.getElementById('s-key').placeholder=CONFIG.hasKey?'•••••••• (saved — leave blank to keep)':'sk-ant-...';
+    checkStorage();
+    toast('Settings saved!'+(CONFIG.hasKey?' ✔ API key stored':''),'success');
+  }).catch(function(err){toast('Could not save: '+err.message,'danger');});
+}
+// ── User management (admin only) ──────────────────────────────────
+function loadUsers(){
+  authPost({action:'listUsers'}).then(function(d){
+    var rows=d.users||[];
+    document.getElementById('user-list').innerHTML=rows.map(function(u){
+      var you=u.username===AUTH.user;
+      return '<div class="d-flex align-items-center gap-2 py-1 border-bottom" style="font-size:.84rem">'
+        +'<span class="flex-grow-1 text-truncate">'+u.username+(you?' <span class="text-muted">(you)</span>':'')+'</span>'
+        +'<span class="role-badge'+(u.role==='admin'?' admin':'')+'">'+(u.role==='admin'?'Admin':'User')+'</span>'
+        +(you?'':'<button class="btn btn-link text-danger p-0 ms-1" style="font-size:.85rem" onclick="delUser('+u.id+",'"+u.username.replace(/'/g,"\\'")+"')\"><i class=\"bi bi-trash3\"></i></button>")
+        +'</div>';
+    }).join('')||'<div class="text-muted small">No users yet.</div>';
+  }).catch(function(err){document.getElementById('user-list').innerHTML='<div class="text-danger small">'+err.message+'</div>';});
+}
+function addUser(e){
+  e.preventDefault();
+  var body={action:'createUser',username:document.getElementById('nu-name').value.trim(),password:document.getElementById('nu-pass').value,role:document.getElementById('nu-role').value};
+  authPost(body).then(function(){
+    document.getElementById('nu-name').value='';document.getElementById('nu-pass').value='';document.getElementById('nu-role').value='user';
+    toast('User added!','success');loadUsers();
+  }).catch(function(err){toast(err.message,'danger');});
+  return false;
+}
+function delUser(id,name){
+  if(!confirm('Delete user "'+name+'"?'))return;
+  authPost({action:'deleteUser',id:id}).then(function(){toast('User deleted','warning');loadUsers();}).catch(function(err){toast(err.message,'danger');});
 }
 function toggleKey(){var el=document.getElementById('s-key');el.type=el.type==='password'?'text':'password';}
 function clearAll(){
@@ -950,6 +1090,7 @@ function toast(msg,type){
   var name=getSetting('camp_name');
   if(name){document.getElementById('brand-name').textContent=name;document.title=name+' Tracker';}
   renderDashboard();
+  authBoot();
 })();
 
 // ── PWA: Service Worker + Install prompt ─────────────────────────

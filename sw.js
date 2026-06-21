@@ -1,7 +1,7 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v6';
+const CACHE = 'camp-utils-v7';
 
 const SHELL = [
   './camputilities.html',
@@ -49,6 +49,8 @@ self.addEventListener('fetch', function(e) {
   // Skip non-GET and Anthropic API calls (need live network)
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('api.anthropic.com')) return;
+  // Auth/extract API calls must always hit the live network, never the cache.
+  if (e.request.url.includes('/api/')) return;
 
   e.respondWith(
     caches.match(e.request).then(function(cached) {
