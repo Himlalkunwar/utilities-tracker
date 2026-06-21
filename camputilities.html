@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Camp Utils">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="icon" href="logo.png" type="image/png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <!-- /PWA -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -68,12 +69,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
 .app-toast{position:fixed;bottom:76px;right:16px;z-index:8888;padding:10px 18px;border-radius:8px;font-size:.875rem;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fadeUp .25s ease;max-width:90vw}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .sbar{font-size:.78rem;min-height:18px}
+/* Role-based visibility: admin-only controls are hidden unless this device is
+   signed in as admin. The server enforces the same rule, so hiding here is
+   purely cosmetic. */
+body:not(.is-admin) .admin-only{display:none!important;}
+.role-badge{display:flex;align-items:center;gap:6px}
+.role-badge i{font-size:.85rem}
 </style>
 </head>
 <body>
 <div id="ovbg" onclick="closeSB()"></div>
 <div id="sidebar">
-  <div class="brand"><img class="logo" src="icon.svg" alt="" width="28" height="28"><span id="brand-name">Camp Utilities</span></div>
+  <div class="brand"><img class="logo" src="logo.png" alt="" width="28" height="28"><span id="brand-name">Camp Utilities</span></div>
   <nav>
     <a class="nl active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a>
     <a class="nl" data-page="new"><i class="bi bi-plus-circle"></i>New Record</a>
@@ -81,13 +88,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
     <a class="nl" data-page="categories"><i class="bi bi-tags"></i>Categories</a>
     <a class="nl" data-page="settings"><i class="bi bi-gear"></i>Settings</a>
   </nav>
-  <div class="sfooter">Tap Settings to set API key</div>
+  <div class="sfooter"><span id="role-badge" class="role-badge"><i class="bi bi-person"></i>User mode · view &amp; add</span></div>
 </div>
 <div id="main">
   <div class="topbar">
     <button class="btn btn-sm d-md-none me-1 px-2" onclick="openSB()"><i class="bi bi-list fs-5"></i></button>
     <h1 id="ptitle">Dashboard</h1>
     <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 me-2" onclick="showShareQR()" title="Share app via QR code"><i class="bi bi-qr-code"></i><span class="d-none d-sm-inline"> Share</span></button>
+    <button id="auth-btn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 me-2" onclick="onAuthBtn()" title="Admin sign in"><i class="bi bi-shield-lock"></i><span class="d-none d-sm-inline"> Admin</span></button>
     <button id="install-btn" class="btn btn-outline-success btn-sm align-items-center gap-1 me-2" onclick="installApp()" style="display:none"><i class="bi bi-download"></i> Install App</button>
     <button class="btn btn-primary btn-sm d-none d-md-flex align-items-center gap-1" onclick="goPage('new')"><i class="bi bi-plus-lg"></i> New Record</button>
   </div>
@@ -213,7 +221,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
     <!-- CATEGORIES -->
     <div id="pg-categories" style="display:none">
       <div class="row g-3">
-        <div class="col-md-4"><div class="card p-3">
+        <div class="col-md-4 admin-only"><div class="card p-3">
           <div class="ct">Add New Category</div>
           <form onsubmit="addCat(event)">
             <div class="mb-2"><label class="form-label small">Name <span class="text-danger">*</span></label>
@@ -275,10 +283,22 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
             <div id="db-size" class="small text-muted mb-3"></div>
             <div class="d-flex gap-2 mb-2">
               <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="exportBackup()"><i class="bi bi-download me-1"></i>Backup (JSON)</button>
-              <label class="btn btn-outline-primary btn-sm flex-grow-1 mb-0" for="restore-input"><i class="bi bi-upload me-1"></i>Restore</label>
+              <label class="btn btn-outline-primary btn-sm flex-grow-1 mb-0 admin-only" for="restore-input"><i class="bi bi-upload me-1"></i>Restore</label>
               <input type="file" id="restore-input" accept=".json" hidden onchange="restoreBackup(this)">
             </div>
-            <button class="btn btn-outline-danger btn-sm w-100" onclick="clearAll()"><i class="bi bi-trash3 me-1"></i>Clear All Data (Reset)</button>
+            <button class="btn btn-outline-danger btn-sm w-100 admin-only" onclick="clearAll()"><i class="bi bi-trash3 me-1"></i>Clear All Data (Reset)</button>
+          </div>
+          <div class="card p-3 mt-3">
+            <div class="ct">Admin Access</div>
+            <div id="admin-status" class="small text-muted mb-2"></div>
+            <button class="btn btn-outline-secondary btn-sm w-100" id="admin-access-btn" onclick="onAuthBtn()"><i class="bi bi-shield-lock me-1"></i>Admin Sign In</button>
+            <div class="admin-only mt-2">
+              <label class="form-label small mb-1">Change admin password</label>
+              <div class="input-group input-group-sm">
+                <input type="password" class="form-control" id="admin-newpw" placeholder="New password (min 4 chars)">
+                <button class="btn btn-outline-primary" type="button" onclick="changeAdminPw()">Update</button>
+              </div>
+            </div>
           </div>
           <div class="card p-3 mt-3">
             <div class="ct">Share with Mobile Devices</div>
@@ -312,6 +332,33 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
           <button class="btn btn-outline-secondary" type="button" onclick="copyShareLink('share-url')"><i class="bi bi-clipboard me-1"></i>Copy</button>
         </div>
         <button class="btn btn-primary btn-sm w-100 mt-2" id="share-native-btn" onclick="nativeShare()" style="display:none"><i class="bi bi-share me-1"></i>Share via…</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ADMIN AUTH MODAL -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i><span id="auth-title">Admin Sign In</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small" id="auth-help">Enter the admin password to add, edit and delete.</p>
+        <div class="mb-2">
+          <label class="form-label small">Password</label>
+          <input type="password" class="form-control" id="auth-pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        </div>
+        <div class="mb-2" id="auth-pw2-wrap" style="display:none">
+          <label class="form-label small">Confirm password</label>
+          <input type="password" class="form-control" id="auth-pw2" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()">
+        </div>
+        <div id="auth-msg" class="small text-danger"></div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="auth-submit" onclick="authSubmit()">Sign In</button>
       </div>
     </div>
   </div>
@@ -394,7 +441,13 @@ function setSetting(k,v){localStorage.setItem('cu_s_'+k,v==null?'':String(v));}
 
 // Shared data store. Every method returns a Promise.
 // 's' is the resource name: 'records' or 'categories'.
+// Admin role — the session token (if signed in) is attached to every request so
+// the server can authorize edit/delete. It is harmless on read requests.
+var AUTH={token:localStorage.getItem('cu_admin_token')||'',configured:false,isAdmin:false};
+function authHeader(){return AUTH.token?{'Authorization':'Bearer '+AUTH.token}:{};}
 function apiFetch(url,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({},opts.headers||{},authHeader());
   return fetch(url,opts).then(function(r){
     if(!r.ok)return r.text().then(function(t){throw new Error(t||('HTTP '+r.status));});
     return r.status===204?null:r.json();
@@ -418,6 +471,94 @@ var PhotoDB={
 // ── App state ────────────────────────────────────────────────────
 var categories=[],chosenImage=null,recPage=0,PAGE=20;
 var trendChart=null,donutChart=null,gaugeCharts=[];
+
+// ── Admin role (sign in / sign out / setup) ───────────────────────
+// Reflect the current role in the UI. The CSS rule `body:not(.is-admin)
+// .admin-only{display:none}` hides every edit/delete control for users.
+function applyRole(){
+  document.body.classList.toggle('is-admin',AUTH.isAdmin);
+  var badge=document.getElementById('role-badge');
+  if(badge)badge.innerHTML=AUTH.isAdmin
+    ?'<i class="bi bi-shield-check"></i>Signed in as Admin'
+    :'<i class="bi bi-person"></i>User mode · view &amp; add';
+  var btn=document.getElementById('auth-btn');
+  if(btn){
+    btn.innerHTML=AUTH.isAdmin
+      ?'<i class="bi bi-box-arrow-right"></i><span class="d-none d-sm-inline"> Sign out</span>'
+      :'<i class="bi bi-shield-lock"></i><span class="d-none d-sm-inline"> Admin</span>';
+    btn.title=AUTH.isAdmin?'Sign out of admin':'Admin sign in';
+    btn.className='btn btn-sm d-flex align-items-center gap-1 me-2 '+(AUTH.isAdmin?'btn-success':'btn-outline-secondary');
+  }
+  var st=document.getElementById('admin-status');
+  if(st)st.innerHTML=AUTH.isAdmin
+    ?'<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Signed in as <strong>Admin</strong> — you can add, edit and delete.</span>'
+    :(AUTH.configured
+      ?'You are in <strong>User mode</strong> (view &amp; add records). Sign in as admin to edit or delete.'
+      :'No admin password exists yet. Sign in to create one and lock down editing.');
+  var aab=document.getElementById('admin-access-btn');
+  if(aab)aab.style.display=AUTH.isAdmin?'none':'';
+}
+// Ask the server who we are. Clears a stale token (e.g. password changed elsewhere).
+function refreshAuth(){
+  return fetch('/api/auth',{headers:authHeader()}).then(function(r){return r.json();}).then(function(d){
+    AUTH.configured=!!d.configured;AUTH.isAdmin=!!d.isAdmin;
+    if(AUTH.token&&!AUTH.isAdmin){AUTH.token='';localStorage.removeItem('cu_admin_token');}
+    applyRole();return d;
+  }).catch(function(){applyRole();});
+}
+function onAuthBtn(){
+  if(AUTH.isAdmin){
+    AUTH.token='';AUTH.isAdmin=false;localStorage.removeItem('cu_admin_token');
+    applyRole();toast('Signed out — back to user mode.','secondary');
+    return;
+  }
+  openAuthModal();
+}
+function openAuthModal(){
+  var setup=!AUTH.configured;
+  document.getElementById('auth-title').textContent=setup?'Create Admin Password':'Admin Sign In';
+  document.getElementById('auth-help').textContent=setup
+    ?'No admin exists yet. Set a password to control who can edit and delete. Anyone without it can still view and add records on any device.'
+    :'Enter the admin password to add, edit and delete. The same password works on every device.';
+  document.getElementById('auth-pw2-wrap').style.display=setup?'':'none';
+  document.getElementById('auth-submit').textContent=setup?'Create & Sign In':'Sign In';
+  document.getElementById('auth-pw').value='';document.getElementById('auth-pw2').value='';
+  document.getElementById('auth-msg').textContent='';
+  new bootstrap.Modal(document.getElementById('authModal')).show();
+  setTimeout(function(){document.getElementById('auth-pw').focus();},350);
+}
+function authSubmit(){
+  var setup=!AUTH.configured;
+  var pw=document.getElementById('auth-pw').value;
+  var msg=document.getElementById('auth-msg');
+  if(!pw){msg.textContent='Enter a password.';return;}
+  if(setup){
+    if(pw.length<4){msg.textContent='Use at least 4 characters.';return;}
+    if(pw!==document.getElementById('auth-pw2').value){msg.textContent='Passwords do not match.';return;}
+  }
+  msg.textContent='Checking…';
+  var body={action:setup?'setup':'login',password:pw};
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.ok?r.json():r.text().then(function(t){throw new Error(t||('HTTP '+r.status));});})
+    .then(function(d){
+      AUTH.token=d.token;localStorage.setItem('cu_admin_token',d.token);
+      AUTH.isAdmin=true;AUTH.configured=true;applyRole();
+      var m=bootstrap.Modal.getInstance(document.getElementById('authModal'));if(m)m.hide();
+      toast(setup?'Admin password created — you are signed in.':'Signed in as admin.','success');
+    })
+    .catch(function(err){msg.textContent=err.message||'Sign in failed.';});
+}
+function changeAdminPw(){
+  var el=document.getElementById('admin-newpw'),pw=el.value;
+  if(!pw||pw.length<4){toast('New password must be at least 4 characters.','warning');return;}
+  fetch('/api/auth',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeader()),body:JSON.stringify({action:'change',newPassword:pw})})
+    .then(function(r){return r.ok?r.json():r.text().then(function(t){throw new Error(t);});})
+    .then(function(d){
+      AUTH.token=d.token;localStorage.setItem('cu_admin_token',d.token);el.value='';
+      toast('Admin password updated.','success');
+    })
+    .catch(function(err){toast('Could not change password: '+err.message,'danger');});
+}
 
 // ── Navigation ───────────────────────────────────────────────────
 var PAGES={dashboard:'Dashboard',new:'New Record',records:'Records',categories:'Categories',settings:'Settings'};
@@ -575,7 +716,7 @@ function renderCats(){
         +'<div class="flex-grow-1"><div class="fw-semibold" style="font-size:.875rem">'+c.name+'</div>'
         +'<div class="text-muted" style="font-size:.73rem">'+c.unit+'</div></div>'
         +'<div style="width:14px;height:14px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>'
-        +'<button class="btn btn-link text-danger p-0 ms-1" style="font-size:.85rem" onclick="delCat('+c.id+')"><i class="bi bi-trash3"></i></button>'
+        +'<button class="btn btn-link text-danger p-0 ms-1 admin-only" style="font-size:.85rem" onclick="delCat('+c.id+')"><i class="bi bi-trash3"></i></button>'
         +'</div></div>';
     }).join(''):'<div class="col-12 text-muted small">No categories yet.</div>';
   });
@@ -623,8 +764,8 @@ function renderRecords(){
         +'<td>'+(r.supplier||'-')+'</td><td>'+(r.vehicle_number||'-')+'</td>'
         +'<td class="text-muted small" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'-')+'</td>'
         +'<td id="img-'+r.id+'">'+(r.hasImage?'<span class="text-muted small">...</span>':'-')+'</td>'
-        +'<td><button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" onclick="openEdit('+r.id+')"><i class="bi bi-pencil"></i></button>'
-        +'<button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="delRecord('+r.id+')"><i class="bi bi-trash3"></i></button></td></tr>';
+        +'<td><button class="btn btn-sm btn-outline-primary py-0 px-1 me-1 admin-only" onclick="openEdit('+r.id+')"><i class="bi bi-pencil"></i></button>'
+        +'<button class="btn btn-sm btn-outline-danger py-0 px-1 admin-only" onclick="delRecord('+r.id+')"><i class="bi bi-trash3"></i></button></td></tr>';
     }).join(''):'<tr><td colspan="10" class="text-center text-muted py-4">No records found</td></tr>';
     page.filter(function(r){return r.hasImage;}).forEach(function(r){
       PhotoDB.get(r.id).then(function(url){
@@ -820,6 +961,7 @@ function loadSettings(){
   }).catch(function(){document.getElementById('db-size').textContent='Could not reach server';});
   checkStorage();
   renderShareQR('settings-qr','settings-share-url');
+  applyRole();
 }
 function saveSettings(){
   setSetting('camp_name',document.getElementById('s-camp').value.trim());
@@ -970,6 +1112,8 @@ function toast(msg,type){
   document.getElementById('f-date').valueAsDate=new Date();
   var name=getSetting('camp_name');
   if(name){document.getElementById('brand-name').textContent=name;document.title=name+' Tracker';}
+  // Determine the current role first so admin-only controls render correctly.
+  refreshAuth();
   // Categories are seeded server-side (shared by all devices); just load them.
   loadCats().then(function(){popCatSel('f-cat');}).catch(function(){});
   renderDashboard();

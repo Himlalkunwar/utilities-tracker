@@ -3,6 +3,8 @@
 // (rather than per-device IndexedDB) means photos sync across devices too.
 import type { Context, Config } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
+import { getDatabase } from "@netlify/database";
+import { requireAdmin } from "../lib/admin.mts";
 
 export default async (req: Request, context: Context) => {
   const id = context.params.id;
@@ -26,6 +28,8 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === "DELETE") {
+      const denied = await requireAdmin(getDatabase(), req);
+      if (denied) return denied;
       await store.delete(key);
       return new Response(null, { status: 204 });
     }

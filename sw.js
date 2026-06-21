@@ -2,12 +2,13 @@
 // App document: network-first (always show the latest deployed build when online)
 // Static libraries/icons: cache-first (versioned, safe to cache long-term)
 
-const CACHE = 'camp-utils-v7';
+const CACHE = 'camp-utils-v8';
 
 const SHELL = [
   './camputilities.html',
   './manifest.json',
   './icon.svg',
+  './logo.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',

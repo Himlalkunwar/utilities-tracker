@@ -12,6 +12,12 @@
   "categories": ["utilities", "productivity", "business"],
   "icons": [
     {
+      "src": "logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
@@ -30,14 +36,14 @@
       "short_name": "New",
       "description": "Add a new utility delivery record",
       "url": "./camputilities.html#new",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "logo.png", "sizes": "1254x1254" }]
     },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View KPI dashboard",
       "url": "./camputilities.html#dashboard",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "logo.png", "sizes": "1254x1254" }]
     }
   ]
 }

@@ -5,6 +5,7 @@
 import type { Context, Config } from "@netlify/functions";
 import { getDatabase } from "@netlify/database";
 import { getStore } from "@netlify/blobs";
+import { requireAdmin } from "../lib/admin.mts";
 
 // Surface the snake_case has_image column as `hasImage`, matching the shape the
 // frontend already expects.
@@ -48,6 +49,8 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === "PUT" && id != null) {
+      const denied = await requireAdmin(db, req);
+      if (denied) return denied;
       const b = await req.json();
       const [row] = await db.sql`
         UPDATE records SET
@@ -67,6 +70,8 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === "DELETE" && id != null) {
+      const denied = await requireAdmin(db, req);
+      if (denied) return denied;
       await db.sql`DELETE FROM records WHERE id = ${id}`;
       // Best-effort removal of the associated photo.
       try {
