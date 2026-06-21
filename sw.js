@@ -1,10 +1,10 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v5';
+const CACHE = 'camp-utils-v6';
 
 const SHELL = [
-  './CampUtilities.html',
+  './camputilities.html',
   './manifest.json',
   './icon.svg',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
@@ -67,7 +67,7 @@ self.addEventListener('fetch', function(e) {
         return response;
       }).catch(function() {
         // Offline fallback: return cached app
-        return caches.match('./CampUtilities.html');
+        return caches.match('./camputilities.html');
       });
     })
   );
