@@ -1,7 +1,7 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v3';
+const CACHE = 'camp-utils-v5';
 
 const SHELL = [
   './CampUtilities.html',
@@ -11,7 +11,8 @@ const SHELL = [
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
 
 // Install: cache everything
@@ -44,6 +45,9 @@ self.addEventListener('fetch', function(e) {
   // Skip non-GET and Anthropic API calls (need live network)
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('api.anthropic.com')) return;
+  // Never cache the shared backend API — it must always hit the network so
+  // records/categories stay in sync across devices.
+  if (new URL(e.request.url).pathname.startsWith('/api/')) return;
 
   e.respondWith(
     caches.match(e.request).then(function(cached) {
