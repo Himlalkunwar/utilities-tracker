@@ -22,7 +22,7 @@
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var(--txt)}
 #sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);background:#0f172a;color:#fff;z-index:300;display:flex;flex-direction:column;transition:transform .25s}
 .brand{padding:18px 16px 14px;font-size:.95rem;font-weight:700;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
-.brand .logo{font-size:1.5rem}
+.brand .logo{width:28px;height:28px;border-radius:7px;display:block;flex:0 0 auto}
 #sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 16px;color:#94a3b8;text-decoration:none;font-size:.875rem;border-left:3px solid transparent;transition:all .15s}
 #sidebar nav a:hover,#sidebar nav a.active{color:#e2e8f0;background:rgba(255,255,255,.06);border-left-color:var(--pri)}
 #sidebar nav a i{width:20px;font-size:1rem}
@@ -73,7 +73,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--sur);color:var
 <body>
 <div id="ovbg" onclick="closeSB()"></div>
 <div id="sidebar">
-  <div class="brand"><span class="logo">&#9978;</span><span id="brand-name">Camp Utilities</span></div>
+  <div class="brand"><img class="logo" src="icon.svg" alt="" width="28" height="28"><span id="brand-name">Camp Utilities</span></div>
   <nav>
     <a class="nl active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a>
     <a class="nl" data-page="new"><i class="bi bi-plus-circle"></i>New Record</a>
@@ -979,7 +979,19 @@ function toast(msg,type){
 var _deferredInstall = null;
 
 if('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function(e){ console.warn('SW:', e); });
+  // When a new service worker takes control (e.g. after a deploy), reload once
+  // so the device immediately shows the latest build instead of a stale cached
+  // ("preview") version. The guard prevents a reload loop.
+  var _reloadedForSW = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (_reloadedForSW) return;
+    _reloadedForSW = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').then(function(reg) {
+    // Proactively check for an updated worker on every load.
+    reg.update();
+  }).catch(function(e){ console.warn('SW:', e); });
 }
 
 window.addEventListener('beforeinstallprompt', function(e) {

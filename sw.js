@@ -1,7 +1,8 @@
 // Camp Utilities — Service Worker
-// Caches app shell + CDN assets for full offline support
+// App document: network-first (always show the latest deployed build when online)
+// Static libraries/icons: cache-first (versioned, safe to cache long-term)
 
-const CACHE = 'camp-utils-v6';
+const CACHE = 'camp-utils-v7';
 
 const SHELL = [
   './camputilities.html',
@@ -15,7 +16,7 @@ const SHELL = [
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
 
-// Install: cache everything
+// Install: cache everything, then take over immediately
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
@@ -26,7 +27,7 @@ self.addEventListener('install', function(e) {
   );
 });
 
-// Activate: delete old caches
+// Activate: delete old caches so a stale build can never be served again
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -40,7 +41,16 @@ self.addEventListener('activate', function(e) {
   );
 });
 
-// Fetch: cache-first for shell, network-first for API calls
+// Decide whether a request is for the app's own HTML document.
+function isAppDocument(request) {
+  if (request.mode === 'navigate') return true;
+  var url = new URL(request.url);
+  if (url.origin !== self.location.origin) return false;
+  return url.pathname === '/' ||
+         url.pathname.endsWith('.html') ||
+         url.pathname.endsWith('/');
+}
+
 self.addEventListener('fetch', function(e) {
   // Skip non-GET and Anthropic API calls (need live network)
   if (e.request.method !== 'GET') return;
@@ -49,14 +59,38 @@ self.addEventListener('fetch', function(e) {
   // records/categories stay in sync across devices.
   if (new URL(e.request.url).pathname.startsWith('/api/')) return;
 
+  // App document → NETWORK-FIRST. This guarantees that a device which once
+  // cached an older build still upgrades to the latest deploy whenever it is
+  // online, instead of being stuck on a stale "preview" version. The cache is
+  // only used as an offline fallback.
+  if (isAppDocument(e.request)) {
+    e.respondWith(
+      fetch(e.request).then(function(response) {
+        if (response && response.status === 200) {
+          var clone = response.clone();
+          caches.open(CACHE).then(function(cache) {
+            cache.put(e.request, clone);
+          });
+        }
+        return response;
+      }).catch(function() {
+        return caches.match(e.request).then(function(cached) {
+          return cached || caches.match('./camputilities.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Everything else (CDN libraries, icons) → CACHE-FIRST.
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       if (cached) return cached;
 
       return fetch(e.request).then(function(response) {
-        // Cache successful responses from CDN
         if (response && response.status === 200 && (
           e.request.url.includes('cdn.jsdelivr.net') ||
+          e.request.url.includes('cdnjs.cloudflare.com') ||
           e.request.url.includes(self.location.origin)
         )) {
           var clone = response.clone();
@@ -66,7 +100,6 @@ self.addEventListener('fetch', function(e) {
         }
         return response;
       }).catch(function() {
-        // Offline fallback: return cached app
         return caches.match('./camputilities.html');
       });
     })
