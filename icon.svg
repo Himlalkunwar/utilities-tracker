@@ -1,16 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="#0f172a"/>
-  <!-- Tent triangle -->
-  <polygon points="256,72 52,400 460,400" fill="#4361ee"/>
-  <!-- Tent door -->
-  <path d="M214,400 Q214,322 256,322 Q298,322 298,400Z" fill="#0f172a"/>
-  <!-- Ground line -->
-  <rect x="40" y="400" width="432" height="12" rx="6" fill="#1e293b"/>
-  <!-- Water drop (left) -->
-  <path d="M104,200 C104,200 80,240 80,258 C80,272 91,282 104,282 C117,282 128,272 128,258 C128,240 104,200 104,200Z" fill="#38bdf8"/>
-  <!-- Lightning bolt (right) -->
-  <polygon points="410,180 388,238 406,238 384,298 430,222 408,222" fill="#fbbf24"/>
-  <!-- Flame top (LPG - center top) -->
-  <path d="M256,44 C248,44 236,54 236,66 C236,78 248,86 256,86 C264,86 276,78 276,66 C276,54 264,44 256,44Z" fill="#f97316" opacity="0.7"/>
+  <rect width="512" height="512" rx="100" fill="#1e3a5f"/>
+  <!-- Generator body -->
+  <rect x="80" y="180" width="352" height="220" rx="20" fill="#2a4f7c"/>
+  <rect x="80" y="180" width="352" height="50" rx="20" fill="#16304f"/>
+  <rect x="80" y="210" width="352" height="20" fill="#16304f"/>
+  <!-- Screen/panel -->
+  <rect x="110" y="245" width="140" height="100" rx="10" fill="#0f1f33"/>
+  <polyline points="120,320 145,280 170,300 190,265 215,310 240,275" fill="none" stroke="#27ae60" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Gauges -->
+  <circle cx="330" cy="270" r="36" fill="#0f1f33" stroke="#e67e22" stroke-width="5"/>
+  <line x1="330" y1="270" x2="330" y2="248" stroke="#e67e22" stroke-width="5" stroke-linecap="round"/>
+  <line x1="330" y1="270" x2="348" y2="278" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="330" cy="270" r="6" fill="#e67e22"/>
+  <!-- Status lights -->
+  <circle cx="330" cy="330" r="10" fill="#27ae60"/>
+  <circle cx="360" cy="330" r="10" fill="#27ae60"/>
+  <circle cx="390" cy="330" r="10" fill="#e67e22"/>
+  <!-- Exhaust pipes -->
+  <rect x="150" y="130" width="24" height="55" rx="8" fill="#374151"/>
+  <rect x="200" y="120" width="24" height="65" rx="8" fill="#374151"/>
+  <!-- Bolts on corners -->
+  <circle cx="105" cy="205" r="8" fill="#1e3a5f"/>
+  <circle cx="407" cy="205" r="8" fill="#1e3a5f"/>
+  <circle cx="105" cy="385" r="8" fill="#1e3a5f"/>
+  <circle cx="407" cy="385" r="8" fill="#1e3a5f"/>
+  <!-- Base feet -->
+  <rect x="100" y="395" width="80" height="20" rx="6" fill="#16304f"/>
+  <rect x="330" y="395" width="80" height="20" rx="6" fill="#16304f"/>
+  <!-- Lightning bolt overlay (top right) -->
+  <polygon points="320,60 295,115 320,110 295,165 355,100 325,100 355,60" fill="#e67e22"/>
 </svg>
