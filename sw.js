@@ -1,7 +1,7 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v3';
+const CACHE = 'camp-utils-v4';
 
 const SHELL = [
   './CampUtilities.html',
@@ -14,11 +14,14 @@ const SHELL = [
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
 ];
 
-// Install: cache everything
+// Install: cache the shell. Each asset is cached individually so a single
+// failing request (e.g. a CDN hiccup) cannot abort the whole installation.
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
-      return cache.addAll(SHELL);
+      return Promise.all(SHELL.map(function(url) {
+        return cache.add(url).catch(function() { /* ignore individual failures */ });
+      }));
     }).then(function() {
       return self.skipWaiting();
     })
@@ -39,12 +42,36 @@ self.addEventListener('activate', function(e) {
   );
 });
 
-// Fetch: cache-first for shell, network-first for API calls
+// Fetch strategy:
+//   - Page navigations: network-first, so the latest deployed app always
+//     wins. A stale cached shell can never keep the app from opening; the
+//     cache is only used as an offline fallback.
+//   - Everything else (app shell + CDN assets): cache-first for speed.
 self.addEventListener('fetch', function(e) {
   // Skip non-GET and Anthropic API calls (need live network)
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('api.anthropic.com')) return;
 
+  // Network-first for navigations (the HTML document)
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(function(response) {
+        if (response && response.status === 200) {
+          var clone = response.clone();
+          caches.open(CACHE).then(function(cache) { cache.put(e.request, clone); });
+        }
+        return response;
+      }).catch(function() {
+        // Offline: serve a cached copy, falling back to the app shell
+        return caches.match(e.request).then(function(cached) {
+          return cached || caches.match('./CampUtilities.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Cache-first for assets
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       if (cached) return cached;

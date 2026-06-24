@@ -1,0 +1,30 @@
+# Static PWA — published from the repository root.
+# No build step: the app is a self-contained HTML/JS bundle.
+
+# Always revalidate the entry points and the service worker so a corrected
+# deploy reaches returning visitors immediately instead of being shadowed by
+# a stale browser cache. The service worker keeps the app fast and offline-capable.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/CampUtilities.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
