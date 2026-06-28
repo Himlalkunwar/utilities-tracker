@@ -1,10 +1,12 @@
 {
+  "id": "/camputilities.html",
   "name": "Camp Utilities Tracker",
   "short_name": "Camp Utils",
   "description": "Camp utility & operations monitoring — fuel, water, LPG, electricity tracking",
   "start_url": "./camputilities.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#4361ee",
@@ -12,10 +14,22 @@
   "categories": ["utilities", "productivity", "business"],
   "icons": [
     {
-      "src": "./assets/app-logo.png",
-      "sizes": "1254x1254",
+      "src": "./assets/icons/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [

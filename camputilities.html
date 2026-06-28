@@ -6,8 +6,9 @@
 <title>Camp Utilities Tracker</title>
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="assets/app-logo.png">
-<link rel="apple-touch-icon" href="assets/app-logo.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -906,6 +907,9 @@ function dlFile(name,type,content){var a=document.createElement('a');a.href=URL.
 var _timers={};
 function dbounce(fn,ms){return function(){clearTimeout(_timers[fn]);_timers[fn]=setTimeout(fn,ms);};}
 var _toast=null;
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
 function toast(msg,type){
   if(_toast)_toast.remove();
   _toast=document.createElement('div');
@@ -943,9 +947,8 @@ if('serviceWorker' in navigator) {
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _deferredInstall = e;
-  // Show install button in topbar
   var btn = document.getElementById('install-btn');
-  if(btn) btn.style.display = 'flex';
+  if(btn && !isStandalone()) btn.style.display = 'flex';
 });
 
 window.addEventListener('appinstalled', function() {
@@ -956,7 +959,8 @@ window.addEventListener('appinstalled', function() {
 });
 
 function installApp() {
-  if(!_deferredInstall) { toast('Open this page in Chrome/Edge to install', 'info'); return; }
+  if(isStandalone()) { toast('App is already installed.', 'info'); return; }
+  if(!_deferredInstall) { toast('Use your browser menu to add this app to the home screen.', 'info'); return; }
   _deferredInstall.prompt();
   _deferredInstall.userChoice.then(function(r) {
     if(r.outcome === 'accepted') toast('Installing...', 'success');
