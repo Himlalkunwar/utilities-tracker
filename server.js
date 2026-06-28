@@ -114,6 +114,14 @@ function getLocalIP() {
   return 'localhost';
 }
 
+function safeExistingImageFilename(filename) {
+  if (!filename) return null;
+  const base = path.basename(String(filename));
+  if (base !== filename) return null;
+  const fp = path.join(UPLOADS_DIR, base);
+  return fs.existsSync(fp) ? base : null;
+}
+
 // ─── API: Settings ────────────────────────────────────────────────────────────
 app.get('/api/settings', (req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -192,9 +200,9 @@ app.get('/api/records/:id', (req, res) => {
 app.post('/api/records', upload.single('image'), (req, res) => {
   const {
     category_id, category_name, quantity, unit,
-    supplier, vehicle_number, delivery_date, notes, extracted_data
+    supplier, vehicle_number, delivery_date, notes, extracted_data, existing_image
   } = req.body;
-  const image_filename = req.file ? req.file.filename : null;
+  const image_filename = req.file ? req.file.filename : safeExistingImageFilename(existing_image);
   const info = db.prepare(`
     INSERT INTO records
       (category_id, category_name, quantity, unit, supplier, vehicle_number,
