@@ -10,34 +10,18 @@
   "theme_color": "#4361ee",
   "lang": "en",
   "categories": ["utilities", "productivity", "business"],
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
-  ],
   "shortcuts": [
     {
       "name": "New Record",
       "short_name": "New",
       "description": "Add a new utility delivery record",
-      "url": "./camputilities.html#new",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+      "url": "./camputilities.html#new"
     },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View KPI dashboard",
-      "url": "./camputilities.html#dashboard",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+      "url": "./camputilities.html#dashboard"
     }
   ]
 }
