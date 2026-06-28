@@ -114,6 +114,14 @@ function getLocalIP() {
   return 'localhost';
 }
 
+function safeExistingImageFilename(filename) {
+  if (!filename) return null;
+  const base = path.basename(String(filename));
+  if (base !== filename) return null;
+  const fp = path.join(UPLOADS_DIR, base);
+  return fs.existsSync(fp) ? base : null;
+}
+
 // ─── API: Settings ────────────────────────────────────────────────────────────
 app.get('/api/settings', (req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -192,9 +200,9 @@ app.get('/api/records/:id', (req, res) => {
 app.post('/api/records', upload.single('image'), (req, res) => {
   const {
     category_id, category_name, quantity, unit,
-    supplier, vehicle_number, delivery_date, notes, extracted_data
+    supplier, vehicle_number, delivery_date, notes, extracted_data, existing_image
   } = req.body;
-  const image_filename = req.file ? req.file.filename : null;
+  const image_filename = req.file ? req.file.filename : safeExistingImageFilename(existing_image);
   const info = db.prepare(`
     INSERT INTO records
       (category_id, category_name, quantity, unit, supplier, vehicle_number,
@@ -345,6 +353,43 @@ app.get('/api/dashboard', (req, res) => {
 });
 
 // ─── API: Export ──────────────────────────────────────────────────────────────
+function groupRowsByCategory(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = row.category_id || row.category_name || 'uncategorized';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        name: row.category_name || 'Uncategorized',
+        icon: row.icon || '',
+        unit: row.unit || '',
+        rows: []
+      });
+    }
+    groups.get(key).rows.push(row);
+  }
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function safeWorksheetName(name, index) {
+  const cleaned = String(name || `Category ${index}`)
+    .replace(/[:\\/?*[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (cleaned || `Category ${index}`).slice(0, 31);
+}
+
+function uniqueWorksheetName(name, index, usedNames) {
+  const base = safeWorksheetName(name, index);
+  let candidate = base;
+  let suffix = 2;
+  while (usedNames.has(candidate)) {
+    const ending = ` ${suffix++}`;
+    candidate = `${base.slice(0, 31 - ending.length)}${ending}`;
+  }
+  usedNames.add(candidate);
+  return candidate;
+}
+
 app.get('/api/export/excel', async (req, res) => {
   const { from, to, category_id } = req.query;
   let sql = 'SELECT r.*, c.icon FROM records r LEFT JOIN categories c ON r.category_id = c.id WHERE 1=1';
@@ -352,17 +397,18 @@ app.get('/api/export/excel', async (req, res) => {
   if (category_id) { sql += ' AND r.category_id = ?'; params.push(category_id); }
   if (from)        { sql += ' AND r.delivery_date >= ?'; params.push(from); }
   if (to)          { sql += ' AND r.delivery_date <= ?'; params.push(to); }
-  sql += ' ORDER BY r.delivery_date DESC, r.recorded_at DESC';
+  sql += ' ORDER BY COALESCE(r.category_name, "Uncategorized") ASC, r.delivery_date DESC, r.recorded_at DESC';
   const rows = db.prepare(sql).all(...params);
+  const groups = groupRowsByCategory(rows);
 
   const campName = getSetting('camp_name') || 'Camp Operations';
   const wb = new ExcelJS.Workbook();
   wb.creator = campName;
-  const ws = wb.addWorksheet('Utility Records', { views: [{ state: 'frozen', ySplit: 2 }] });
+  const ws = wb.addWorksheet('Records by Category', { views: [{ state: 'frozen', ySplit: 2 }] });
 
   // Title row
   ws.mergeCells('A1:J1');
-  ws.getCell('A1').value = `${campName} — Utility Records`;
+  ws.getCell('A1').value = `${campName} — Utility Records by Category`;
   ws.getCell('A1').font  = { bold: true, size: 14 };
   ws.getCell('A1').fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4361EE' } };
   ws.getCell('A1').font  = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
@@ -387,11 +433,11 @@ app.get('/api/export/excel', async (req, res) => {
   ];
 
   const ip = getLocalIP();
-  rows.forEach((r, i) => {
+  const addRecordRow = (sheet, r, shade = false) => {
     const imageUrl = r.image_filename
       ? `http://${ip}:${PORT}/uploads/${r.image_filename}`
       : '';
-    const row = ws.addRow([
+    const row = sheet.addRow([
       r.id, r.delivery_date, r.category_name,
       r.quantity, r.unit, r.supplier,
       r.vehicle_number, r.notes, imageUrl, r.recorded_at
@@ -400,10 +446,62 @@ app.get('/api/export/excel', async (req, res) => {
       row.getCell(9).value = { text: 'View Image', hyperlink: imageUrl };
       row.getCell(9).font  = { color: { argb: 'FF0000FF' }, underline: true };
     }
-    if (i % 2 === 1) {
+    if (shade) {
       row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
     }
+  };
+
+  groups.forEach((group) => {
+    ws.addRow([]);
+    const totalQty = group.rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    const categoryRow = ws.addRow([
+      `${group.icon ? `${group.icon} ` : ''}${group.name}`,
+      '',
+      `Records: ${group.rows.length}`,
+      `Total Qty: ${totalQty}`,
+      group.unit,
+      '', '', '', '', ''
+    ]);
+    categoryRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    categoryRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+    group.rows.forEach((r, i) => addRecordRow(ws, r, i % 2 === 1));
   });
+
+  const usedSheetNames = new Set(['Records by Category', 'Summary']);
+  groups.forEach((group, index) => {
+    const sheet = wb.addWorksheet(uniqueWorksheetName(group.name, index + 1, usedSheetNames), { views: [{ state: 'frozen', ySplit: 1 }] });
+    sheet.addRow(headers);
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+    sheet.columns = ws.columns.map(col => ({ key: col.key, width: col.width }));
+    group.rows.forEach((r, i) => addRecordRow(sheet, r, i % 2 === 1));
+    const totalQty = group.rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    sheet.addRow([]);
+    const totalRow = sheet.addRow(['', 'TOTAL', group.rows.length, totalQty, group.unit, '', '', '', '', '']);
+    totalRow.font = { bold: true };
+  });
+
+  const summary = wb.addWorksheet('Summary');
+  summary.columns = [
+    { key: 'category', width: 24 },
+    { key: 'unit', width: 10 },
+    { key: 'records', width: 12 },
+    { key: 'total', width: 14 }
+  ];
+  summary.addRow(['Category', 'Unit', 'Records', 'Total Qty']);
+  summary.getRow(1).font = { bold: true };
+  groups.forEach((group) => {
+    summary.addRow([
+      `${group.icon ? `${group.icon} ` : ''}${group.name}`,
+      group.unit,
+      group.rows.length,
+      group.rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0)
+    ]);
+  });
+
+  if (!rows.length) {
+    ws.addRow(['No records found for the selected filters']);
+  }
 
   // Totals
   ws.addRow([]);
@@ -422,18 +520,32 @@ app.get('/api/export/csv', (req, res) => {
   if (category_id) { sql += ' AND r.category_id = ?'; params.push(category_id); }
   if (from)        { sql += ' AND r.delivery_date >= ?'; params.push(from); }
   if (to)          { sql += ' AND r.delivery_date <= ?'; params.push(to); }
-  sql += ' ORDER BY r.delivery_date DESC';
+  sql += ' ORDER BY COALESCE(r.category_name, "Uncategorized") ASC, r.delivery_date DESC';
   const rows = db.prepare(sql).all(...params);
+  const groups = groupRowsByCategory(rows);
 
   const ip = getLocalIP();
   const header = 'ID,Date,Category,Quantity,Unit,Supplier,Vehicle#,Notes,ImageURL,RecordedAt\n';
   const esc = v => (v == null ? '' : `"${String(v).replace(/"/g, '""')}"`);
-  const lines = rows.map(r => [
-    r.id, r.delivery_date, r.category_name, r.quantity, r.unit,
-    r.supplier, r.vehicle_number, r.notes,
-    r.image_filename ? `http://${ip}:${PORT}/uploads/${r.image_filename}` : '',
-    r.recorded_at
-  ].map(esc).join(','));
+  const lines = [];
+  groups.forEach(group => {
+    const totalQty = group.rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    lines.push('');
+    lines.push([
+      `${group.icon ? `${group.icon} ` : ''}${group.name}`,
+      `Records: ${group.rows.length}`,
+      `Total Qty: ${totalQty}`,
+      group.unit
+    ].map(esc).join(','));
+    group.rows.forEach(r => {
+      lines.push([
+        r.id, r.delivery_date, r.category_name, r.quantity, r.unit,
+        r.supplier, r.vehicle_number, r.notes,
+        r.image_filename ? `http://${ip}:${PORT}/uploads/${r.image_filename}` : '',
+        r.recorded_at
+      ].map(esc).join(','));
+    });
+  });
 
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="utility_records_${Date.now()}.csv"`);
