@@ -401,7 +401,11 @@ var PhotoDB=(function(){
     }).catch(function(){return null;});
   }
   return{
-    get:function(id){return tx('readonly',function(s){return s.get(id);});},
+    get:function(id){
+      return tx('readonly',function(s){return s.get(id);}).then(function(row){
+        return row&&row.data?row.data:null;
+      });
+    },
     put:function(id,data){return tx('readwrite',function(s){return s.put({id:id,data:data});});},
     del:function(id){return tx('readwrite',function(s){return s.delete(id);});}
   };
