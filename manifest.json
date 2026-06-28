@@ -10,6 +10,14 @@
   "theme_color": "#4361ee",
   "lang": "en",
   "categories": ["utilities", "productivity", "business"],
+  "icons": [
+    {
+      "src": "./assets/app-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
   "shortcuts": [
     {
       "name": "New Record",
