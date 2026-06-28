@@ -590,15 +590,7 @@ function loadRecords(){
   renderRecords();
 }
 function renderRecords(){
-  var catId=(document.getElementById('fil-cat')||{}).value||'';
-  var from=(document.getElementById('fil-from')||{}).value||'';
-  var to=(document.getElementById('fil-to')||{}).value||'';
-  var q=((document.getElementById('fil-q')||{}).value||'').toLowerCase();
-  var rows=Store.getAll('records');
-  if(catId)rows=rows.filter(function(r){return r.category_id==catId;});
-  if(from)rows=rows.filter(function(r){return r.delivery_date>=from;});
-  if(to)rows=rows.filter(function(r){return r.delivery_date<=to;});
-  if(q)rows=rows.filter(function(r){return(r.supplier||'').toLowerCase().includes(q)||(r.vehicle_number||'').toLowerCase().includes(q)||(r.category_name||'').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q);});
+  var rows=getFilteredRecords();
   rows.sort(function(a,b){return(b.recorded_at||'').localeCompare(a.recorded_at||'');});
   var total=rows.length,page=rows.slice(recPage*PAGE,(recPage+1)*PAGE);
   document.getElementById('rec-tbody').innerHTML=page.length?page.map(function(r){
@@ -620,6 +612,18 @@ function renderRecords(){
   document.getElementById('rec-count').textContent=total?(recPage*PAGE+1)+'-'+Math.min((recPage+1)*PAGE,total)+' of '+total+' records':'0 records';
   document.getElementById('btn-prev').disabled=recPage===0;
   document.getElementById('btn-next').disabled=(recPage+1)*PAGE>=total;
+}
+function getFilteredRecords(){
+  var catId=(document.getElementById('fil-cat')||{}).value||'';
+  var from=(document.getElementById('fil-from')||{}).value||'';
+  var to=(document.getElementById('fil-to')||{}).value||'';
+  var q=((document.getElementById('fil-q')||{}).value||'').toLowerCase();
+  var rows=Store.getAll('records');
+  if(catId)rows=rows.filter(function(r){return r.category_id==catId;});
+  if(from)rows=rows.filter(function(r){return r.delivery_date>=from;});
+  if(to)rows=rows.filter(function(r){return r.delivery_date<=to;});
+  if(q)rows=rows.filter(function(r){return(r.supplier||'').toLowerCase().includes(q)||(r.vehicle_number||'').toLowerCase().includes(q)||(r.category_name||'').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q);});
+  return rows;
 }
 function changePage(d){recPage=Math.max(0,recPage+d);renderRecords();}
 function viewPhoto(id){
@@ -858,7 +862,7 @@ function uniqueSheetName(name,idx,used){
   return out;
 }
 function exportExcel(){
-  var records=Store.getAll('records'),cats=Store.getAll('categories'),camp=getSetting('camp_name','Camp');
+  var records=getFilteredRecords(),camp=getSetting('camp_name','Camp');
   var header=['#','Date','Category','Quantity','Unit','Supplier','Vehicle #','Notes','Has Photo','Recorded At'];
   var groups=groupedRecords(records);
   var data=[header];
@@ -877,29 +881,29 @@ function exportExcel(){
     cws['!cols']=ws['!cols'];
     XLSX.utils.book_append_sheet(wb,cws,uniqueSheetName(g.label,idx+1,usedSheets));
   });
-  var sum=[['Category','Unit','Records','Total Qty']].concat(cats.map(function(c){var cr=records.filter(function(r){return r.category_id===c.id;});return[c.name,c.unit,cr.length,cr.reduce(function(s,r){return s+(Number(r.quantity)||0);},0)];}));
+  var sum=[['Category','Unit','Records','Total Qty']].concat(groupedRecords(records).map(function(g){return[g.label,g.unit,g.records.length,g.records.reduce(function(s,r){return s+(Number(r.quantity)||0);},0)];}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Summary');
   XLSX.writeFile(wb,(camp||'Camp').replace(/\s+/g,'_')+'_records_'+today()+'.xlsx');toast('Excel downloaded!');
 }
 function exportCSV(){
-  var records=Store.getAll('records'),groups=groupedRecords(records);
+  var records=getFilteredRecords(),groups=groupedRecords(records);
   var esc=function(v){return v==null?'':'"'+String(v).replace(/"/g,'""')+'"';};
   var lines=[];
   groups.forEach(function(g){
     lines.push('');
     lines.push([g.label,'Records: '+g.records.length,'Total Qty: '+g.records.reduce(function(s,r){return s+(Number(r.quantity)||0);},0)].map(esc).join(','));
+    lines.push('ID,Date,Category,Quantity,Unit,Supplier,Vehicle#,Notes,Has Photo,Recorded At');
     g.records.forEach(function(r){lines.push([r.id,r.delivery_date,r.category_name,r.quantity,r.unit,r.supplier,r.vehicle_number,r.notes,r.hasImage?'Yes':'No',(r.recorded_at||'').slice(0,19)].map(esc).join(','));});
   });
-  dlFile('utility_records_'+today()+'.csv','text/csv','ID,Date,Category,Quantity,Unit,Supplier,Vehicle#,Notes,Has Photo,Recorded At\n'+lines.join('\n'));toast('CSV downloaded!');
+  dlFile('utility_records_'+today()+'.csv','text/csv',lines.join('\n'));toast('CSV downloaded!');
 }
 function exportHTML(){
-  var records=Store.getAll('records'),camp=getSetting('camp_name','Camp');
+  var records=getFilteredRecords(),camp=getSetting('camp_name','Camp');
   var promises=records.map(function(r){return r.hasImage?PhotoDB.get(r.id):Promise.resolve(null);});
   Promise.all(promises).then(function(photos){
-    var rows=groupedRecords(records).map(function(g){
+    var sections=groupedRecords(records).map(function(g){
       var total=g.records.reduce(function(s,r){return s+(Number(r.quantity)||0);},0);
-      return '<tr class="cat-row"><td colspan="8">'+g.label+' <span>'+g.records.length+' records | Total Qty: '+fmt(total)+' '+(g.unit||'')+'</span></td></tr>'
-        +g.records.map(function(r){
+      var rows=g.records.map(function(r){
           var photoUrl=photos[records.indexOf(r)];
           return '<tr><td>'+r.id+'</td><td>'+(r.delivery_date||'-')+'</td>'
             +'<td><span style="background:'+(r.color||'#888')+';color:#fff;padding:2px 8px;border-radius:12px;font-size:.8rem">'+(r.icon||'')+' '+(r.category_name||'-')+'</span></td>'
@@ -907,14 +911,16 @@ function exportHTML(){
             +'<td>'+(r.supplier||'-')+'</td><td>'+(r.vehicle_number||'-')+'</td><td>'+(r.notes||'-')+'</td>'
             +'<td>'+(photoUrl?'<img src="'+photoUrl+'" style="max-width:110px;max-height:90px;border-radius:6px">':'-')+'</td></tr>';
         }).join('');
+      return '<section><div class="category-title">'+g.label+' <span>'+g.records.length+' records | Total Qty: '+fmt(total)+' '+(g.unit||'')+'</span></div>'
+        +'<table><thead><tr><th>#</th><th>Date</th><th>Category</th><th>Qty</th><th>Supplier</th><th>Vehicle #</th><th>Notes</th><th>Photo</th></tr></thead><tbody>'+rows+'</tbody></table></section>';
     }).join('');
+    if(!sections)sections='<p class="empty">No records found for the selected filters.</p>';
     var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+camp+'</title>'
-      +'<style>body{font-family:Segoe UI,sans-serif;margin:24px}h1{color:#4361ee}table{border-collapse:collapse;width:100%;font-size:.875rem}'
+      +'<style>body{font-family:Segoe UI,sans-serif;margin:24px;color:#0f172a}h1{color:#4361ee}section{break-inside:avoid;margin:22px 0 30px}table{border-collapse:collapse;width:100%;font-size:.875rem}'
       +'th{background:#4361ee;color:#fff;padding:8px 10px;text-align:left}td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle}'
-      +'tr:nth-child(even) td{background:#f8fafc}.cat-row td{background:#0f172a!important;color:#fff;font-weight:700;font-size:1rem}.cat-row span{font-weight:400;color:#cbd5e1;margin-left:12px}</style></head><body>'
+      +'tr:nth-child(even) td{background:#f8fafc}.category-title{background:#0f172a;color:#fff;font-weight:700;font-size:1rem;padding:10px 12px;border-radius:6px 6px 0 0}.category-title span{font-weight:400;color:#cbd5e1;margin-left:12px}.empty{color:#64748b}</style></head><body>'
       +'<h1>'+camp+' - Utility Records by Category</h1><p style="color:#64748b;font-size:.85rem">Generated: '+new Date().toLocaleString()+' | '+records.length+' records</p>'
-      +'<table><thead><tr><th>#</th><th>Date</th><th>Category</th><th>Qty</th><th>Supplier</th><th>Vehicle #</th><th>Notes</th><th>Photo</th></tr></thead>'
-      +'<tbody>'+rows+'</tbody></table></body></html>';
+      +sections+'</body></html>';
     dlFile((camp||'Camp').replace(/\s+/g,'_')+'_report_'+today()+'.html','text/html',html);toast('HTML report downloaded!');
   });
 }

@@ -1,7 +1,7 @@
 // Camp Utilities — Service Worker
 // Caches app shell + CDN assets for full offline support
 
-const CACHE = 'camp-utils-v8';
+const CACHE = 'camp-utils-v9';
 
 const SHELL = [
   './',
